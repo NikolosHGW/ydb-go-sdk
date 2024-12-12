@@ -83,16 +83,16 @@ func WithSeed(seed int64) option {
 }
 
 func New(opts ...option) logBackoff {
-	b := logBackoff{
+	bOff := logBackoff{
 		r: xrand.New(xrand.WithLock()),
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&b)
+			opt(&bOff)
 		}
 	}
 
-	return b
+	return bOff
 }
 
 // Delay returns mapping of i to Delay.
@@ -102,13 +102,13 @@ func (b logBackoff) Delay(i int) time.Duration {
 		s = time.Second
 	}
 	n := 1 << min(uint(i), max(1, b.ceiling))
-	d := s * time.Duration(n)
-	f := time.Duration(math.Min(1, math.Abs(b.jitterLimit)) * float64(d))
-	if f == d {
+	duration := s * time.Duration(n)
+	f := time.Duration(math.Min(1, math.Abs(b.jitterLimit)) * float64(duration))
+	if f == duration {
 		return f
 	}
 
-	return f + time.Duration(b.r.Int64(int64(d-f)+1))
+	return f + time.Duration(b.r.Int64(int64(duration-f)+1))
 }
 
 func min(a, b uint) uint {

@@ -34,13 +34,13 @@ func Example_createDropNode() {
 		return
 	}
 	defer db.Coordination().DropNode(ctx, "/local/test")
-	entry, c, err := db.Coordination().DescribeNode(ctx, "/local/test")
+	entry, nodeConfig, err := db.Coordination().DescribeNode(ctx, "/local/test")
 	if err != nil {
 		fmt.Printf("failed to describe node: %v", err)
 
 		return
 	}
-	fmt.Printf("node description: %+v\nnode config: %+v\n", entry, c)
+	fmt.Printf("node description: %+v\nnode config: %+v\n", entry, nodeConfig)
 }
 
 func Example_semaphore() {
@@ -73,13 +73,13 @@ func Example_semaphore() {
 		}
 	}()
 
-	entry, c, err := db.Coordination().DescribeNode(ctx, "/local/test")
+	entry, nodeConfig, err := db.Coordination().DescribeNode(ctx, "/local/test")
 	if err != nil {
 		fmt.Printf("failed to describe node: %v\n", err)
 
 		return
 	}
-	fmt.Printf("node description: %+v\nnode config: %+v\n", entry, c)
+	fmt.Printf("node description: %+v\nnode config: %+v\n", entry, nodeConfig)
 
 	session, err := db.Coordination().Session(ctx, "/local/test")
 	if err != nil {

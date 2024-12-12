@@ -240,7 +240,7 @@ func TestCluster(t *testing.T) {
 	})
 
 	t.Run("PreferByNodeID", func(t *testing.T) {
-		s := New([]endpoint.Endpoint{
+		testCluster := New([]endpoint.Endpoint{
 			&mock.Endpoint{
 				AddrField:   "1",
 				NodeIDField: 1,
@@ -260,7 +260,7 @@ func TestCluster(t *testing.T) {
 		})
 
 		xtest.TestManyTimes(t, func(t testing.TB) {
-			e, err := s.Next(endpoint.WithNodeID(ctx, 3))
+			e, err := testCluster.Next(endpoint.WithNodeID(ctx, 3))
 			require.NoError(t, err)
 			require.NotNil(t, e)
 			require.Equal(t, "3", e.Address())

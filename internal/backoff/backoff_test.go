@@ -18,13 +18,13 @@ func TestDelays(t *testing.T) {
 
 		return d
 	}
-	b := New(
+	bOff := New(
 		WithSlotDuration(duration("500ms")),
 		WithCeiling(6),
 		WithJitterLimit(1),
 		WithSeed(0),
 	)
-	for i, d := range map[int]time.Duration{
+	for i, timeDuration := range map[int]time.Duration{
 		0: duration("500ms"),
 		1: duration("1s"),
 		2: duration("2s"),
@@ -35,8 +35,8 @@ func TestDelays(t *testing.T) {
 		7: duration("32s"),
 		8: duration("32s"),
 	} {
-		t.Run(fmt.Sprintf("%v -> %v", i, d), func(t *testing.T) {
-			require.Equal(t, d, b.Delay(i))
+		t.Run(fmt.Sprintf("%v -> %v", i, timeDuration), func(t *testing.T) {
+			require.Equal(t, timeDuration, bOff.Delay(i))
 		})
 	}
 }

@@ -96,15 +96,15 @@ func TestWorkerClose(t *testing.T) {
 }
 
 func TestWorkerConcurrentStartAndClose(t *testing.T) {
-	xtest.TestManyTimes(t, func(t testing.TB) {
+	xtest.TestManyTimes(t, func(tb testing.TB) {
 		targetClose := int64(10)
 
 		parallel := runtime.GOMAXPROCS(0)
 
 		var counter atomic.Int64
 
-		ctx := xtest.Context(t)
-		worker := NewWorker(ctx, "test-worker, "+t.Name())
+		ctx := xtest.Context(tb)
+		worker := NewWorker(ctx, "test-worker, "+tb.Name())
 
 		stopNewStarts := atomic.Bool{}
 		var wgStarters sync.WaitGroup
@@ -126,25 +126,25 @@ func TestWorkerConcurrentStartAndClose(t *testing.T) {
 		}
 
 		// wait start some backgrounds - for ensure about process worked
-		xtest.SpinWaitCondition(t, nil, func() bool {
+		xtest.SpinWaitCondition(tb, nil, func() bool {
 			return counter.Load() > targetClose
 		})
 
-		require.NoError(t, worker.Close(xtest.ContextWithCommonTimeout(ctx, t), nil))
+		require.NoError(tb, worker.Close(xtest.ContextWithCommonTimeout(ctx, tb), nil))
 
 		stopNewStarts.Store(true)
-		xtest.WaitGroup(t, &wgStarters)
+		xtest.WaitGroup(tb, &wgStarters)
 
 		_, ok := <-worker.tasks
-		require.False(t, ok)
-		require.True(t, worker.closed)
+		require.False(tb, ok)
+		require.True(tb, worker.closed)
 	})
 }
 
 func TestWorkerStartCompletedWhileLongWait(t *testing.T) {
-	xtest.TestManyTimes(t, func(t testing.TB) {
-		ctx := xtest.Context(t)
-		worker := NewWorker(ctx, "test-worker, "+t.Name())
+	xtest.TestManyTimes(t, func(tb testing.TB) {
+		ctx := xtest.Context(tb)
+		worker := NewWorker(ctx, "test-worker, "+tb.Name())
 
 		allowStop := make(empty.Chan)
 		closeStarted := make(empty.Chan)
@@ -175,17 +175,17 @@ func TestWorkerStartCompletedWhileLongWait(t *testing.T) {
 			_ = worker.Close(ctx, nil)
 		}()
 
-		xtest.WaitChannelClosed(t, callStartFinished)
+		xtest.WaitChannelClosed(tb, callStartFinished)
 		runtime.Gosched()
 
 		select {
 		case <-closed:
-			t.Fatal()
+			tb.Fatal()
 		default:
 			// pass
 		}
 
 		close(allowStop)
-		xtest.WaitChannelClosed(t, closed)
+		xtest.WaitChannelClosed(tb, closed)
 	})
 }

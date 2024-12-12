@@ -96,13 +96,13 @@ func TestCheckFastestAddress(t *testing.T) {
 
 func TestDetectLocalDC(t *testing.T) {
 	ctx := context.Background()
-	xtest.TestManyTimesWithName(t, "Ok", func(t testing.TB) {
+	xtest.TestManyTimesWithName(t, "Ok", func(tb testing.TB) {
 		listen1, err := net.ListenTCP("tcp", &net.TCPAddr{IP: localIP})
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		defer func() { _ = listen1.Close() }()
 
 		listen2, err := net.ListenTCP("tcp", &net.TCPAddr{IP: localIP})
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		listen2Addr := listen2.Addr().String()
 		_ = listen2.Close() // force close, for not accept tcp connections
 
@@ -110,8 +110,8 @@ func TestDetectLocalDC(t *testing.T) {
 			&mock.Endpoint{LocationField: "a", AddrField: "grpc://" + listen1.Addr().String()},
 			&mock.Endpoint{LocationField: "b", AddrField: "grpc://" + listen2Addr},
 		})
-		require.NoError(t, err)
-		require.Equal(t, "a", dc)
+		require.NoError(tb, err)
+		require.Equal(tb, "a", dc)
 	})
 	t.Run("Empty", func(t *testing.T) {
 		res, err := detectLocalDC(ctx, nil)
@@ -133,7 +133,7 @@ func TestLocalDCDiscovery(t *testing.T) {
 	cfg := config.New(
 		config.WithBalancer(balancers.PreferNearestDC(balancers.Default())),
 	)
-	r := &Balancer{
+	testBalancer := &Balancer{
 		driverConfig:   cfg,
 		balancerConfig: *cfg.Balancer(),
 		pool:           conn.NewPool(context.Background(), cfg),
@@ -149,11 +149,11 @@ func TestLocalDCDiscovery(t *testing.T) {
 		},
 	}
 
-	err := r.clusterDiscoveryAttempt(ctx)
+	err := testBalancer.clusterDiscoveryAttempt(ctx)
 	require.NoError(t, err)
 
 	for i := 0; i < 100; i++ {
-		conn, _ := r.connections().GetConnection(ctx)
+		conn, _ := testBalancer.connections().GetConnection(ctx)
 		require.Equal(t, "b:234", conn.Endpoint().Address())
 		require.Equal(t, "b", conn.Endpoint().Location())
 	}
@@ -224,12 +224,12 @@ func TestGetRandomEndpoints(t *testing.T) {
 		res = getRandomEndpoints(source, 4)
 		require.Equal(t, source, res)
 	})
-	xtest.TestManyTimesWithName(t, "SelectRandom", func(t testing.TB) {
+	xtest.TestManyTimesWithName(t, "SelectRandom", func(tb testing.TB) {
 		res := getRandomEndpoints(source, 2)
-		require.Len(t, res, 2)
+		require.Len(tb, res, 2)
 		for _, ep := range res {
-			require.Contains(t, source, ep)
+			require.Contains(tb, source, ep)
 		}
-		require.NotEqual(t, res[0], res[1])
+		require.NotEqual(tb, res[0], res[1])
 	})
 }

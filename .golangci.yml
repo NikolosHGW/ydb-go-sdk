@@ -206,7 +206,7 @@ linters-settings:
         checkExported: true
   varnamelen:
     min-name-length: 2
-    ignore-names:
+    ignore-names: # TODO: точно надо убрать i?
       - i
 linters:
   enable-all: true

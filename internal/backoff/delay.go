@@ -24,7 +24,7 @@ func WithSlowBackoff(slow Backoff) delayOption {
 	}
 }
 
-func Delay(t Type, i int, opts ...delayOption) time.Duration {
+func Delay(backoffType Type, i int, opts ...delayOption) time.Duration {
 	optionsHolder := delayOptions{
 		fast: Fast,
 		slow: Slow,
@@ -32,7 +32,7 @@ func Delay(t Type, i int, opts ...delayOption) time.Duration {
 	for _, opt := range opts {
 		opt(&optionsHolder)
 	}
-	switch t {
+	switch backoffType {
 	case TypeFast:
 		return optionsHolder.fast.Delay(i)
 	case TypeSlow:

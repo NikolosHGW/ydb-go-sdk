@@ -305,7 +305,7 @@ func (b *Balancer) NewStream(
 	return nil, err
 }
 
-func (b *Balancer) wrapCall(ctx context.Context, f func(ctx context.Context, cc conn.Conn) error) (err error) {
+func (b *Balancer) wrapCall(ctx context.Context, fn func(ctx context.Context, cc conn.Conn) error) (err error) {
 	cc, err := b.getConn(ctx)
 	if err != nil {
 		return xerrors.WithStackTrace(err)
@@ -321,7 +321,7 @@ func (b *Balancer) wrapCall(ctx context.Context, f func(ctx context.Context, cc 
 		}
 	}()
 
-	if err = f(ctx, cc); err != nil {
+	if err = fn(ctx, cc); err != nil {
 		if conn.UseWrapping(ctx) {
 			if credentials.IsAccessError(err) {
 				err = credentials.AccessError("no access", err,
