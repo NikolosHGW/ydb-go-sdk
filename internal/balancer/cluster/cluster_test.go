@@ -38,14 +38,14 @@ func TestCluster(t *testing.T) {
 	})
 
 	t.Run("One", func(t *testing.T) {
-		s := New([]endpoint.Endpoint{&mock.Endpoint{
+		testCluster := New([]endpoint.Endpoint{&mock.Endpoint{
 			AddrField:   "1",
 			NodeIDField: 1,
 		}})
 
-		require.Len(t, s.All(), 1)
+		require.Len(t, testCluster.All(), 1)
 
-		e, err := s.Next(ctx)
+		e, err := testCluster.Next(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, e)
 		require.Equal(t, "1", e.Address())
@@ -56,20 +56,20 @@ func TestCluster(t *testing.T) {
 		ctxWithCancel, cancel := context.WithCancel(ctx)
 		cancel()
 
-		s := New([]endpoint.Endpoint{&mock.Endpoint{
+		testCluster := New([]endpoint.Endpoint{&mock.Endpoint{
 			AddrField:   "1",
 			NodeIDField: 1,
 		}})
 
-		require.Len(t, s.All(), 1)
+		require.Len(t, testCluster.All(), 1)
 
-		e, err := s.Next(ctxWithCancel)
+		e, err := testCluster.Next(ctxWithCancel)
 		require.ErrorIs(t, err, context.Canceled)
 		require.Nil(t, e)
 	})
 
 	t.Run("Without", func(t *testing.T) {
-		s := New([]endpoint.Endpoint{
+		testCluster := New([]endpoint.Endpoint{
 			&mock.Endpoint{
 				AddrField:   "1",
 				NodeIDField: 1,
@@ -93,75 +93,75 @@ func TestCluster(t *testing.T) {
 		})
 
 		{ // initial state
-			require.Len(t, s.All(), 5)
-			require.Len(t, s.index, 5)
-			require.Len(t, s.prefer, 5)
+			require.Len(t, testCluster.All(), 5)
+			require.Len(t, testCluster.index, 5)
+			require.Len(t, testCluster.prefer, 5)
 		}
 
 		{ // without first endpoint
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.NotNil(t, e)
-			s = Without(s, e)
-			require.Len(t, s.All(), 5)
-			require.Len(t, s.index, 5)
-			require.Len(t, s.prefer, 4)
-			require.Len(t, s.fallback, 1)
+			testCluster = Without(testCluster, e)
+			require.Len(t, testCluster.All(), 5)
+			require.Len(t, testCluster.index, 5)
+			require.Len(t, testCluster.prefer, 4)
+			require.Len(t, testCluster.fallback, 1)
 		}
 
 		{ // without second endpoint
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.NotNil(t, e)
-			s = Without(s, e)
-			require.Len(t, s.All(), 5)
-			require.Len(t, s.index, 5)
-			require.Len(t, s.prefer, 3)
-			require.Len(t, s.fallback, 2)
+			testCluster = Without(testCluster, e)
+			require.Len(t, testCluster.All(), 5)
+			require.Len(t, testCluster.index, 5)
+			require.Len(t, testCluster.prefer, 3)
+			require.Len(t, testCluster.fallback, 2)
 		}
 
 		{ // without third endpoint
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.NotNil(t, e)
-			s = Without(s, e)
-			require.Len(t, s.All(), 5)
-			require.Len(t, s.index, 5)
-			require.Len(t, s.prefer, 2)
-			require.Len(t, s.fallback, 3)
+			testCluster = Without(testCluster, e)
+			require.Len(t, testCluster.All(), 5)
+			require.Len(t, testCluster.index, 5)
+			require.Len(t, testCluster.prefer, 2)
+			require.Len(t, testCluster.fallback, 3)
 		}
 
 		{ // without fourth endpoint
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.NotNil(t, e)
-			s = Without(s, e)
-			require.Len(t, s.All(), 5)
-			require.Len(t, s.index, 5)
-			require.Len(t, s.prefer, 1)
-			require.Len(t, s.fallback, 4)
+			testCluster = Without(testCluster, e)
+			require.Len(t, testCluster.All(), 5)
+			require.Len(t, testCluster.index, 5)
+			require.Len(t, testCluster.prefer, 1)
+			require.Len(t, testCluster.fallback, 4)
 		}
 
 		{ // without fifth endpoint
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.NotNil(t, e)
-			s = Without(s, e)
-			require.Len(t, s.All(), 5)
-			require.Len(t, s.index, 5)
-			require.Empty(t, s.prefer)
-			require.Len(t, s.fallback, 5)
+			testCluster = Without(testCluster, e)
+			require.Len(t, testCluster.All(), 5)
+			require.Len(t, testCluster.index, 5)
+			require.Empty(t, testCluster.prefer)
+			require.Len(t, testCluster.fallback, 5)
 		}
 
 		{ // next from fallback is ok
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.NotNil(t, e)
 		}
 	})
 
 	t.Run("WithFilter", func(t *testing.T) {
-		s := New([]endpoint.Endpoint{
+		testCluster := New([]endpoint.Endpoint{
 			&mock.Endpoint{
 				AddrField:   "1",
 				NodeIDField: 1,
@@ -182,15 +182,15 @@ func TestCluster(t *testing.T) {
 			return e.NodeID()%2 == 0
 		}))
 
-		require.Len(t, s.index, 2)
-		require.Len(t, s.All(), 2)
-		require.Len(t, s.prefer, 2)
-		require.Empty(t, s.fallback)
+		require.Len(t, testCluster.index, 2)
+		require.Len(t, testCluster.All(), 2)
+		require.Len(t, testCluster.prefer, 2)
+		require.Empty(t, testCluster.fallback)
 	})
 
 	t.Run("WithFallback", func(t *testing.T) {
 		t.Run("SplittedPreferAndFallback", func(t *testing.T) {
-			s := New([]endpoint.Endpoint{
+			testCluster := New([]endpoint.Endpoint{
 				&mock.Endpoint{
 					AddrField:   "1",
 					NodeIDField: 1,
@@ -211,14 +211,14 @@ func TestCluster(t *testing.T) {
 				return e.NodeID()%2 == 0
 			}), WithFallback(true))
 
-			require.Len(t, s.index, 4)
-			require.Len(t, s.All(), 4)
-			require.Len(t, s.prefer, 2)
-			require.Len(t, s.fallback, 2)
+			require.Len(t, testCluster.index, 4)
+			require.Len(t, testCluster.All(), 4)
+			require.Len(t, testCluster.prefer, 2)
+			require.Len(t, testCluster.fallback, 2)
 		})
 
 		t.Run("OnlyFallback", func(t *testing.T) {
-			s := New([]endpoint.Endpoint{
+			testCluster := New([]endpoint.Endpoint{
 				&mock.Endpoint{
 					AddrField:   "1",
 					NodeIDField: 1,
@@ -227,12 +227,12 @@ func TestCluster(t *testing.T) {
 				return false
 			}), WithFallback(true))
 
-			require.Len(t, s.index, 1)
-			require.Len(t, s.All(), 1)
-			require.Empty(t, s.prefer)
-			require.Len(t, s.fallback, 1)
+			require.Len(t, testCluster.index, 1)
+			require.Len(t, testCluster.All(), 1)
+			require.Empty(t, testCluster.prefer)
+			require.Len(t, testCluster.fallback, 1)
 
-			e, err := s.Next(ctx)
+			e, err := testCluster.Next(ctx)
 			require.NoError(t, err)
 			require.Equal(t, "1", e.Address())
 			require.Equal(t, uint32(1), e.NodeID())
@@ -338,7 +338,7 @@ func BenchmarkNext512(b *testing.B) {
 func benchmarkNextParallel(b *testing.B, parallelism int) {
 	ctx := xtest.Context(b)
 
-	s := New([]endpoint.Endpoint{
+	testCluster := New([]endpoint.Endpoint{
 		&mock.Endpoint{
 			AddrField:   "1",
 			NodeIDField: 1,
@@ -370,7 +370,7 @@ func benchmarkNextParallel(b *testing.B, parallelism int) {
 			defer wg.Done()
 
 			for i := 0; i < b.N/parallelism; i++ {
-				e, err := s.Next(ctx)
+				e, err := testCluster.Next(ctx)
 				require.NoError(b, err)
 				require.NotNil(b, e)
 			}

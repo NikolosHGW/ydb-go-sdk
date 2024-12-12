@@ -168,18 +168,24 @@ func TestSelectRandomConnection(t *testing.T) {
 
 	t.Run("One", func(t *testing.T) {
 		for _, goodState := range []conn.State{conn.Online, conn.Offline, conn.Created} {
-			c, failedCount := connState.selectRandomConnection([]conn.Conn{&mock.Conn{AddrField: "asd", State: goodState}}, false)
+			c, failedCount := connState.selectRandomConnection(
+				[]conn.Conn{&mock.Conn{AddrField: "asd", State: goodState}},
+				false,
+			)
 			require.Equal(t, &mock.Conn{AddrField: "asd", State: goodState}, c)
 			require.Equal(t, 0, failedCount)
 		}
 	})
 	t.Run("OneBanned", func(t *testing.T) {
-		c, failedCount := connState.selectRandomConnection([]conn.Conn{&mock.Conn{AddrField: "asd", State: conn.Banned}}, false)
-		require.Nil(t, c)
+		randomConn, failedCount := connState.selectRandomConnection(
+			[]conn.Conn{&mock.Conn{AddrField: "asd", State: conn.Banned}},
+			false,
+		)
+		require.Nil(t, randomConn)
 		require.Equal(t, 1, failedCount)
 
-		c, failedCount = connState.selectRandomConnection([]conn.Conn{&mock.Conn{AddrField: "asd", State: conn.Banned}}, true)
-		require.Equal(t, &mock.Conn{AddrField: "asd", State: conn.Banned}, c)
+		randomConn, failedCount = connState.selectRandomConnection([]conn.Conn{&mock.Conn{AddrField: "asd", State: conn.Banned}}, true)
+		require.Equal(t, &mock.Conn{AddrField: "asd", State: conn.Banned}, randomConn)
 		require.Equal(t, 0, failedCount)
 	})
 	t.Run("Two", func(t *testing.T) {

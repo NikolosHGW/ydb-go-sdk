@@ -38,34 +38,34 @@ func WithFallback(allowFallback bool) option {
 }
 
 func New(endpoints []endpoint.Endpoint, opts ...option) *Cluster {
-	s := &Cluster{
+	clstr := &Cluster{
 		filter: func(e endpoint.Info) bool {
 			return true
 		},
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		opt(clstr)
 	}
 
-	if s.rand == nil {
-		s.rand = xrand.New(xrand.WithLock())
+	if clstr.rand == nil {
+		clstr.rand = xrand.New(xrand.WithLock())
 	}
 
-	s.prefer, s.fallback = xslices.Split(endpoints, func(e endpoint.Endpoint) bool {
-		return s.filter(e)
+	clstr.prefer, clstr.fallback = xslices.Split(endpoints, func(e endpoint.Endpoint) bool {
+		return clstr.filter(e)
 	})
 
-	if s.allowFallback {
-		s.all = endpoints
-		s.index = xslices.Map(endpoints, func(e endpoint.Endpoint) uint32 { return e.NodeID() })
+	if clstr.allowFallback {
+		clstr.all = endpoints
+		clstr.index = xslices.Map(endpoints, func(e endpoint.Endpoint) uint32 { return e.NodeID() })
 	} else {
-		s.all = s.prefer
-		s.fallback = nil
-		s.index = xslices.Map(s.prefer, func(e endpoint.Endpoint) uint32 { return e.NodeID() })
+		clstr.all = clstr.prefer
+		clstr.fallback = nil
+		clstr.index = xslices.Map(clstr.prefer, func(e endpoint.Endpoint) uint32 { return e.NodeID() })
 	}
 
-	return s
+	return clstr
 }
 
 func (s *Cluster) All() (all []endpoint.Endpoint) {
@@ -76,27 +76,27 @@ func (s *Cluster) All() (all []endpoint.Endpoint) {
 	return s.all
 }
 
-func Without(s *Cluster, endpoints ...endpoint.Endpoint) *Cluster {
-	prefer := make([]endpoint.Endpoint, 0, len(s.prefer))
-	fallback := s.fallback
+func Without(clstr *Cluster, endpoints ...endpoint.Endpoint) *Cluster {
+	prefer := make([]endpoint.Endpoint, 0, len(clstr.prefer))
+	fallback := clstr.fallback
 	for _, endpoint := range endpoints {
-		for i := range s.prefer {
-			if s.prefer[i].Address() != endpoint.Address() {
-				prefer = append(prefer, s.prefer[i])
+		for i := range clstr.prefer {
+			if clstr.prefer[i].Address() != endpoint.Address() {
+				prefer = append(prefer, clstr.prefer[i])
 			} else {
-				fallback = append(fallback, s.prefer[i])
+				fallback = append(fallback, clstr.prefer[i])
 			}
 		}
 	}
 
 	return &Cluster{
-		filter:        s.filter,
-		allowFallback: s.allowFallback,
-		index:         s.index,
+		filter:        clstr.filter,
+		allowFallback: clstr.allowFallback,
+		index:         clstr.index,
 		prefer:        prefer,
 		fallback:      fallback,
-		all:           s.all,
-		rand:          s.rand,
+		all:           clstr.all,
+		rand:          clstr.rand,
 	}
 }
 

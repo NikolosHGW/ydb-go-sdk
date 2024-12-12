@@ -18,14 +18,14 @@ func (m NumericArgs) blockID() blockID {
 }
 
 func (m NumericArgs) RewriteQuery(sql string, args ...interface{}) (yql string, newArgs []interface{}, err error) {
-	l := &sqlLexer{
+	lexer := &sqlLexer{
 		src:        sql,
 		stateFn:    numericArgsStateFn,
 		rawStateFn: numericArgsStateFn,
 	}
 
-	for l.stateFn != nil {
-		l.stateFn = l.stateFn(l)
+	for lexer.stateFn != nil {
+		lexer.stateFn = lexer.stateFn(lexer)
 	}
 
 	buffer := xstring.Buffer()
@@ -42,20 +42,20 @@ func (m NumericArgs) RewriteQuery(sql string, args ...interface{}) (yql string, 
 		}
 	}
 
-	for _, p := range l.parts {
-		switch p := p.(type) {
+	for _, p := range lexer.parts {
+		switch partType := p.(type) {
 		case string:
-			buffer.WriteString(p)
+			buffer.WriteString(partType)
 		case numericArg:
-			if p == 0 {
+			if partType == 0 {
 				return "", nil, xerrors.WithStackTrace(ErrUnexpectedNumericArgZero)
 			}
-			if int(p) > len(args) {
+			if int(partType) > len(args) {
 				return "", nil, xerrors.WithStackTrace(
-					fmt.Errorf("%w: $%d, len(args) = %d", ErrInconsistentArgs, p, len(args)),
+					fmt.Errorf("%w: $%d, len(args) = %d", ErrInconsistentArgs, partType, len(args)),
 				)
 			}
-			paramIndex := int(p - 1)
+			paramIndex := int(partType - 1)
 			val, ok := newArgs[paramIndex].(table.ParameterOption)
 			if !ok {
 				panic(fmt.Sprintf("unsupported type conversion from %T to table.ParameterOption", val))
@@ -149,13 +149,13 @@ func numericArgState(l *sqlLexer) stateFn {
 		}
 	}()
 	for {
-		r, width := utf8.DecodeRuneInString(l.src[l.pos:])
+		rn, width := utf8.DecodeRuneInString(l.src[l.pos:])
 		l.pos += width
 
 		switch {
-		case isNumber(r):
-			numbers += string(r)
-		case isLetter(r):
+		case isNumber(rn):
+			numbers += string(rn)
+		case isLetter(rn):
 			numbers = ""
 
 			return l.rawStateFn

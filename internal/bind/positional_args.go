@@ -19,14 +19,14 @@ func (m PositionalArgs) blockID() blockID {
 func (m PositionalArgs) RewriteQuery(sql string, args ...interface{}) (
 	yql string, newArgs []interface{}, err error,
 ) {
-	l := &sqlLexer{
+	lexer := &sqlLexer{
 		src:        sql,
 		stateFn:    positionalArgsStateFn,
 		rawStateFn: positionalArgsStateFn,
 	}
 
-	for l.stateFn != nil {
-		l.stateFn = l.stateFn(l)
+	for lexer.stateFn != nil {
+		lexer.stateFn = lexer.stateFn(lexer)
 	}
 
 	var (
@@ -36,7 +36,7 @@ func (m PositionalArgs) RewriteQuery(sql string, args ...interface{}) (
 	)
 	defer buffer.Free()
 
-	for _, p := range l.parts {
+	for _, p := range lexer.parts {
 		switch p := p.(type) {
 		case string:
 			buffer.WriteString(p)

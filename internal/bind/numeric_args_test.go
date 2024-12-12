@@ -12,8 +12,8 @@ import (
 
 func TestNumericArgsBindRewriteQuery(t *testing.T) {
 	var (
-		now = time.Now()
-		b   = NumericArgs{}
+		now            = time.Now()
+		testNumericArg = NumericArgs{}
 	)
 	for _, tt := range []struct {
 		sql    string
@@ -314,7 +314,7 @@ SELECT $p0, $p1`,
 		},
 	} {
 		t.Run("", func(t *testing.T) {
-			yql, params, err := b.RewriteQuery(tt.sql, tt.args...)
+			yql, params, err := testNumericArg.RewriteQuery(tt.sql, tt.args...)
 			if tt.err != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tt.err)

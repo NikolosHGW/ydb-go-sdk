@@ -46,7 +46,7 @@ func asUUID(v interface{}) (value.Value, bool) {
 }
 
 func toType(v interface{}) (_ types.Type, err error) { //nolint:funlen
-	switch x := v.(type) {
+	switch valueType := v.(type) {
 	case bool:
 		return types.Bool, nil
 	case int:
@@ -84,56 +84,56 @@ func toType(v interface{}) (_ types.Type, err error) { //nolint:funlen
 	case time.Duration:
 		return types.Interval, nil
 	default:
-		kind := reflect.TypeOf(x).Kind()
+		kind := reflect.TypeOf(valueType).Kind()
 		switch kind {
 		case reflect.Slice, reflect.Array:
-			v := reflect.ValueOf(x)
-			t, err := toType(reflect.New(v.Type().Elem()).Elem().Interface())
+			v := reflect.ValueOf(valueType)
+			elemType, err := toType(reflect.New(v.Type().Elem()).Elem().Interface())
 			if err != nil {
 				return nil, xerrors.WithStackTrace(
 					fmt.Errorf("cannot parse slice item type %T: %w",
-						x, errUnsupportedType,
+						valueType, errUnsupportedType,
 					),
 				)
 			}
 
-			return types.NewList(t), nil
+			return types.NewList(elemType), nil
 		case reflect.Map:
-			v := reflect.ValueOf(x)
+			reflectValue := reflect.ValueOf(valueType)
 
-			keyType, err := toType(reflect.New(v.Type().Key()).Interface())
+			keyType, err := toType(reflect.New(reflectValue.Type().Key()).Interface())
 			if err != nil {
 				return nil, fmt.Errorf("cannot parse %T map key: %w",
-					reflect.New(v.Type().Key()).Interface(), err,
+					reflect.New(reflectValue.Type().Key()).Interface(), err,
 				)
 			}
-			valueType, err := toType(reflect.New(v.Type().Elem()).Interface())
+			valueType, err := toType(reflect.New(reflectValue.Type().Elem()).Interface())
 			if err != nil {
 				return nil, fmt.Errorf("cannot parse %T map value: %w",
-					v.MapKeys()[0].Interface(), err,
+					reflectValue.MapKeys()[0].Interface(), err,
 				)
 			}
 
 			return types.NewDict(keyType, valueType), nil
 		case reflect.Struct:
-			v := reflect.ValueOf(x)
+			reflectValue := reflect.ValueOf(valueType)
 
-			fields := make([]types.StructField, v.NumField())
+			fields := make([]types.StructField, reflectValue.NumField())
 
 			for i := range fields {
-				kk, has := v.Type().Field(i).Tag.Lookup("sql")
+				kk, has := reflectValue.Type().Field(i).Tag.Lookup("sql")
 				if !has {
 					return nil, xerrors.WithStackTrace(
 						fmt.Errorf("cannot parse %v as key field of struct: %w",
-							v.Field(i).Interface(), errUnsupportedType,
+							reflectValue.Field(i).Interface(), errUnsupportedType,
 						),
 					)
 				}
-				tt, err := toType(v.Field(i).Interface())
+				tt, err := toType(reflectValue.Field(i).Interface())
 				if err != nil {
 					return nil, xerrors.WithStackTrace(
 						fmt.Errorf("cannot parse %v as values of dict: %w",
-							v.Field(i).Interface(), errUnsupportedType,
+							reflectValue.Field(i).Interface(), errUnsupportedType,
 						),
 					)
 				}
@@ -148,7 +148,7 @@ func toType(v interface{}) (_ types.Type, err error) { //nolint:funlen
 		default:
 			return nil, xerrors.WithStackTrace(
 				fmt.Errorf("%T: %w. Create issue for support new type %s",
-					x, errUnsupportedType, supportNewTypeLink(x),
+					valueType, errUnsupportedType, supportNewTypeLink(valueType),
 				),
 			)
 		}
@@ -194,61 +194,61 @@ func toValue(v interface{}) (_ value.Value, err error) {
 		return value.OptionalValue(vv), nil
 	}
 
-	switch x := v.(type) {
+	switch elemType := v.(type) {
 	case nil:
 		return value.VoidValue(), nil
 	case value.Value:
-		return x, nil
+		return elemType, nil
 	case bool:
-		return value.BoolValue(x), nil
+		return value.BoolValue(elemType), nil
 	case int:
-		return value.Int32Value(int32(x)), nil
+		return value.Int32Value(int32(elemType)), nil
 	case uint:
-		return value.Uint32Value(uint32(x)), nil
+		return value.Uint32Value(uint32(elemType)), nil
 	case int8:
-		return value.Int8Value(x), nil
+		return value.Int8Value(elemType), nil
 	case uint8:
-		return value.Uint8Value(x), nil
+		return value.Uint8Value(elemType), nil
 	case int16:
-		return value.Int16Value(x), nil
+		return value.Int16Value(elemType), nil
 	case uint16:
-		return value.Uint16Value(x), nil
+		return value.Uint16Value(elemType), nil
 	case int32:
-		return value.Int32Value(x), nil
+		return value.Int32Value(elemType), nil
 	case uint32:
-		return value.Uint32Value(x), nil
+		return value.Uint32Value(elemType), nil
 	case int64:
-		return value.Int64Value(x), nil
+		return value.Int64Value(elemType), nil
 	case uint64:
-		return value.Uint64Value(x), nil
+		return value.Uint64Value(elemType), nil
 	case float32:
-		return value.FloatValue(x), nil
+		return value.FloatValue(elemType), nil
 	case float64:
-		return value.DoubleValue(x), nil
+		return value.DoubleValue(elemType), nil
 	case []byte:
-		return value.BytesValue(x), nil
+		return value.BytesValue(elemType), nil
 	case string:
-		return value.TextValue(x), nil
+		return value.TextValue(elemType), nil
 	case []string:
-		items := make([]value.Value, len(x))
-		for i := range x {
-			items[i] = value.TextValue(x[i])
+		items := make([]value.Value, len(elemType))
+		for i := range elemType {
+			items[i] = value.TextValue(elemType[i])
 		}
 
 		return value.ListValue(items...), nil
 	case value.UUIDIssue1501FixedBytesWrapper:
-		return value.UUIDWithIssue1501Value(x.AsBytesArray()), nil
+		return value.UUIDWithIssue1501Value(elemType.AsBytesArray()), nil
 	case [16]byte:
 		return nil, xerrors.Wrap(value.ErrIssue1501BadUUID)
 	case time.Time:
-		return value.TimestampValueFromTime(x), nil
+		return value.TimestampValueFromTime(elemType), nil
 	case time.Duration:
-		return value.IntervalValueFromDuration(x), nil
+		return value.IntervalValueFromDuration(elemType), nil
 	default:
-		kind := reflect.TypeOf(x).Kind()
+		kind := reflect.TypeOf(elemType).Kind()
 		switch kind {
 		case reflect.Slice, reflect.Array:
-			v := reflect.ValueOf(x)
+			v := reflect.ValueOf(elemType)
 			list := make([]value.Value, v.Len())
 
 			for i := range list {
@@ -256,7 +256,7 @@ func toValue(v interface{}) (_ value.Value, err error) {
 				if err != nil {
 					return nil, xerrors.WithStackTrace(
 						fmt.Errorf("cannot parse %d item of slice %T: %w",
-							i, x, err,
+							i, elemType, err,
 						),
 					)
 				}
@@ -264,7 +264,7 @@ func toValue(v interface{}) (_ value.Value, err error) {
 
 			return value.ListValue(list...), nil
 		case reflect.Map:
-			v := reflect.ValueOf(x)
+			v := reflect.ValueOf(elemType)
 			fields := make([]value.DictValueField, 0, len(v.MapKeys()))
 			iter := v.MapRange()
 			for iter.Next() {
@@ -288,24 +288,24 @@ func toValue(v interface{}) (_ value.Value, err error) {
 
 			return value.DictValue(fields...), nil
 		case reflect.Struct:
-			v := reflect.ValueOf(x)
+			reflectValue := reflect.ValueOf(elemType)
 
-			fields := make([]value.StructValueField, v.NumField())
+			fields := make([]value.StructValueField, reflectValue.NumField())
 
 			for i := range fields {
-				kk, has := v.Type().Field(i).Tag.Lookup("sql")
+				kk, has := reflectValue.Type().Field(i).Tag.Lookup("sql")
 				if !has {
 					return nil, xerrors.WithStackTrace(
 						fmt.Errorf("cannot parse %q as key field of struct: %w",
-							v.Type().Field(i).Name, errUnsupportedType,
+							reflectValue.Type().Field(i).Name, errUnsupportedType,
 						),
 					)
 				}
-				vv, err := toValue(v.Field(i).Interface())
+				vv, err := toValue(reflectValue.Field(i).Interface())
 				if err != nil {
 					return nil, xerrors.WithStackTrace(
 						fmt.Errorf("cannot parse %v as values of dict: %w",
-							v.Index(i).Interface(), err,
+							reflectValue.Index(i).Interface(), err,
 						),
 					)
 				}
@@ -320,7 +320,7 @@ func toValue(v interface{}) (_ value.Value, err error) {
 		default:
 			return nil, xerrors.WithStackTrace(
 				fmt.Errorf("%T: %w. Create issue for support new type %s",
-					x, errUnsupportedType, supportNewTypeLink(x),
+					elemType, errUnsupportedType, supportNewTypeLink(elemType),
 				),
 			)
 		}
@@ -367,24 +367,24 @@ func Params(args ...interface{}) ([]*params.Parameter, error) {
 		var newParam *params.Parameter
 		var newParams []*params.Parameter
 		var err error
-		switch x := arg.(type) {
+		switch elemType := arg.(type) {
 		case driver.NamedValue:
-			newParams, err = paramHandleNamedValue(x, i, len(args))
+			newParams, err = paramHandleNamedValue(elemType, i, len(args))
 		case sql.NamedArg:
-			if x.Name == "" {
+			if elemType.Name == "" {
 				return nil, xerrors.WithStackTrace(errUnnamedParam)
 			}
-			newParam, err = toYdbParam(x.Name, x.Value)
+			newParam, err = toYdbParam(elemType.Name, elemType.Value)
 			newParams = append(newParams, newParam)
 		case *params.Params:
 			if len(args) > 1 {
 				return nil, xerrors.WithStackTrace(errMultipleQueryParameters)
 			}
-			parameters = *x
+			parameters = *elemType
 		case *params.Parameter:
-			newParams = append(newParams, x)
+			newParams = append(newParams, elemType)
 		default:
-			newParam, err = toYdbParam(fmt.Sprintf("$p%d", i), x)
+			newParam, err = toYdbParam(fmt.Sprintf("$p%d", i), elemType)
 			newParams = append(newParams, newParam)
 		}
 		if err != nil {
@@ -401,15 +401,15 @@ func Params(args ...interface{}) ([]*params.Parameter, error) {
 
 func paramHandleNamedValue(arg driver.NamedValue, paramNumber, argsLen int) ([]*params.Parameter, error) {
 	if arg.Name == "" {
-		switch x := arg.Value.(type) {
+		switch driverType := arg.Value.(type) {
 		case *params.Params:
 			if argsLen > 1 {
 				return nil, xerrors.WithStackTrace(errMultipleQueryParameters)
 			}
 
-			return *x, nil
+			return *driverType, nil
 		case *params.Parameter:
-			return []*params.Parameter{x}, nil
+			return []*params.Parameter{driverType}, nil
 		default:
 			arg.Name = fmt.Sprintf("$p%d", paramNumber)
 			param, err := toYdbParam(arg.Name, arg.Value)
