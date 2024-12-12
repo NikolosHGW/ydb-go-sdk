@@ -34,13 +34,13 @@ func Example_createDropNode() {
 		return
 	}
 	defer db.Coordination().DropNode(ctx, "/local/test")
-	e, c, err := db.Coordination().DescribeNode(ctx, "/local/test")
+	entry, c, err := db.Coordination().DescribeNode(ctx, "/local/test")
 	if err != nil {
 		fmt.Printf("failed to describe node: %v", err)
 
 		return
 	}
-	fmt.Printf("node description: %+v\nnode config: %+v\n", e, c)
+	fmt.Printf("node description: %+v\nnode config: %+v\n", entry, c)
 }
 
 func Example_semaphore() {
@@ -73,24 +73,24 @@ func Example_semaphore() {
 		}
 	}()
 
-	e, c, err := db.Coordination().DescribeNode(ctx, "/local/test")
+	entry, c, err := db.Coordination().DescribeNode(ctx, "/local/test")
 	if err != nil {
 		fmt.Printf("failed to describe node: %v\n", err)
 
 		return
 	}
-	fmt.Printf("node description: %+v\nnode config: %+v\n", e, c)
+	fmt.Printf("node description: %+v\nnode config: %+v\n", entry, c)
 
-	s, err := db.Coordination().Session(ctx, "/local/test")
+	session, err := db.Coordination().Session(ctx, "/local/test")
 	if err != nil {
 		fmt.Printf("failed to create session: %v\n", err)
 
 		return
 	}
-	defer s.Close(ctx)
-	fmt.Printf("session 1 created, id: %d\n", s.SessionID())
+	defer session.Close(ctx)
+	fmt.Printf("session 1 created, id: %d\n", session.SessionID())
 
-	err = s.CreateSemaphore(ctx, "my-semaphore", 20, options.WithCreateData([]byte{1, 2, 3}))
+	err = session.CreateSemaphore(ctx, "my-semaphore", 20, options.WithCreateData([]byte{1, 2, 3}))
 	if err != nil {
 		fmt.Printf("failed to create semaphore: %v", err)
 
@@ -98,7 +98,7 @@ func Example_semaphore() {
 	}
 	fmt.Printf("semaphore my-semaphore created\n")
 
-	lease, err := s.AcquireSemaphore(ctx, "my-semaphore", 10)
+	lease, err := session.AcquireSemaphore(ctx, "my-semaphore", 10)
 	if err != nil {
 		fmt.Printf("failed to acquire semaphore: %v", err)
 
@@ -113,10 +113,10 @@ func Example_semaphore() {
 
 	fmt.Printf("session 1 acquired semaphore 10\n")
 
-	s.Reconnect()
+	session.Reconnect()
 	fmt.Printf("session 1 reconnected\n")
 
-	desc, err := s.DescribeSemaphore(
+	desc, err := session.DescribeSemaphore(
 		ctx,
 		"my-semaphore",
 		options.WithDescribeOwners(true),
@@ -137,7 +137,7 @@ func Example_semaphore() {
 	}
 	fmt.Printf("session 1 released semaphore my-semaphore\n")
 
-	err = s.DeleteSemaphore(ctx, "my-semaphore", options.WithForceDelete(true))
+	err = session.DeleteSemaphore(ctx, "my-semaphore", options.WithForceDelete(true))
 	if err != nil {
 		fmt.Printf("failed to delete semaphore: %v", err)
 

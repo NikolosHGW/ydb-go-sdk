@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	a = &Ydb.TypedValue{
+	aTypedValue = &Ydb.TypedValue{
 		Type: &Ydb.Type{
 			Type: &Ydb.Type_TypeId{
 				TypeId: Ydb.Type_UINT64,
@@ -28,7 +28,7 @@ var (
 			},
 		},
 	}
-	b = &Ydb.TypedValue{
+	bTypedValue = &Ydb.TypedValue{
 		Type: &Ydb.Type{
 			Type: &Ydb.Type_TypeId{
 				TypeId: Ydb.Type_UUID,
@@ -41,7 +41,7 @@ var (
 			High_128: 1157159078456920585,
 		},
 	}
-	c = &Ydb.TypedValue{
+	cTypedValue = &Ydb.TypedValue{
 		Type: &Ydb.Type{
 			Type: &Ydb.Type_OptionalType{
 				OptionalType: &Ydb.OptionalType{
@@ -59,7 +59,7 @@ var (
 			},
 		},
 	}
-	d = &Ydb.TypedValue{
+	dTypedValue = &Ydb.TypedValue{
 		Type: &Ydb.Type{
 			Type: &Ydb.Type_ListType{
 				ListType: &Ydb.ListType{
@@ -109,10 +109,10 @@ func makeParamsUsingParamsBuilder(tb testing.TB) params.Parameters {
 
 func makeParamsUsingRawProtobuf(tb testing.TB) params.Parameters {
 	return ydb.ParamsBuilder().
-		Param("$a").Raw(a).
-		Param("$b").Raw(b).
-		Param("$c").Raw(c).
-		Param("$d").Raw(d).
+		Param("$a").Raw(aTypedValue).
+		Param("$b").Raw(bTypedValue).
+		Param("$c").Raw(cTypedValue).
+		Param("$d").Raw(dTypedValue).
 		Build()
 }
 
@@ -141,10 +141,10 @@ func makeParamsUsingTableTypes(tb testing.TB) params.Parameters {
 
 func TestParams(t *testing.T) {
 	exp := map[string]*Ydb.TypedValue{
-		"$a": a,
-		"$b": b,
-		"$c": c,
-		"$d": d,
+		"$a": aTypedValue,
+		"$b": bTypedValue,
+		"$c": cTypedValue,
+		"$d": dTypedValue,
 	}
 	t.Run("ParamsBuilder", func(t *testing.T) {
 		params := makeParamsUsingParamsBuilder(t)

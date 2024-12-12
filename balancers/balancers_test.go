@@ -57,13 +57,13 @@ func TestPreferLocationsWithFallback(t *testing.T) {
 	require.Equal(t, []conn.Conn{conns[0], conns[2]}, applyPreferFilter(balancerConfig.Info{}, rr, conns))
 }
 
-func applyPreferFilter(info balancerConfig.Info, b *balancerConfig.Config, conns []conn.Conn) []conn.Conn {
-	if b.Filter == nil {
-		b.Filter = filterFunc(func(info balancerConfig.Info, e endpoint.Info) bool { return true })
+func applyPreferFilter(info balancerConfig.Info, balancerCfg *balancerConfig.Config, conns []conn.Conn) []conn.Conn {
+	if balancerCfg.Filter == nil {
+		balancerCfg.Filter = filterFunc(func(info balancerConfig.Info, e endpoint.Info) bool { return true })
 	}
 	res := make([]conn.Conn, 0, len(conns))
 	for _, c := range conns {
-		if b.Filter.Allow(info, c.Endpoint()) {
+		if balancerCfg.Filter.Allow(info, c.Endpoint()) {
 			res = append(res, c)
 		}
 	}

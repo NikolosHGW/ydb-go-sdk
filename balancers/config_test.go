@@ -167,7 +167,7 @@ func TestFromConfig(t *testing.T) {
 				actErr   error
 				fallback = &balancerConfig.Config{}
 			)
-			b := FromConfig(
+			balancer := FromConfig(
 				tt.config,
 				WithParseErrorFallbackBalancer(fallback),
 				WithParseErrorHandler(func(err error) {
@@ -180,18 +180,18 @@ func TestFromConfig(t *testing.T) {
 			if !tt.fail && actErr != nil {
 				t.Fatalf("unexpected error: %v", actErr)
 			}
-			if tt.fail && b != fallback {
-				t.Fatalf("unexpected balancer: %v", b)
+			if tt.fail && balancer != fallback {
+				t.Fatalf("unexpected balancer: %v", balancer)
 			}
 
 			// function pointers can check equal to nil only
 			if tt.res.Filter != nil {
-				require.NotNil(t, b.Filter)
-				b.Filter = nil
+				require.NotNil(t, balancer.Filter)
+				balancer.Filter = nil
 				tt.res.Filter = nil
 			}
 
-			require.Equal(t, tt.res, *b)
+			require.Equal(t, tt.res, *balancer)
 		})
 	}
 }

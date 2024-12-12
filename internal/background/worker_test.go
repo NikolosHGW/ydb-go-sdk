@@ -72,18 +72,18 @@ func TestWorkerStart(t *testing.T) {
 func TestWorkerClose(t *testing.T) {
 	t.Run("StopBackground", func(t *testing.T) {
 		ctx := xtest.Context(t)
-		w := NewWorker(ctx, "test-worker, "+t.Name())
+		worker := NewWorker(ctx, "test-worker, "+t.Name())
 
 		started := make(empty.Chan)
 		stopped := atomic.Bool{}
-		w.Start("test", func(innerCtx context.Context) {
+		worker.Start("test", func(innerCtx context.Context) {
 			close(started)
 			<-innerCtx.Done()
 			stopped.Store(true)
 		})
 
 		xtest.WaitChannelClosed(t, started)
-		require.NoError(t, w.Close(ctx, nil))
+		require.NoError(t, worker.Close(ctx, nil))
 		require.True(t, stopped.Load())
 	})
 
@@ -104,7 +104,7 @@ func TestWorkerConcurrentStartAndClose(t *testing.T) {
 		var counter atomic.Int64
 
 		ctx := xtest.Context(t)
-		w := NewWorker(ctx, "test-worker, "+t.Name())
+		worker := NewWorker(ctx, "test-worker, "+t.Name())
 
 		stopNewStarts := atomic.Bool{}
 		var wgStarters sync.WaitGroup
@@ -118,7 +118,7 @@ func TestWorkerConcurrentStartAndClose(t *testing.T) {
 						return
 					}
 
-					w.Start("test", func(ctx context.Context) {
+					worker.Start("test", func(ctx context.Context) {
 						counter.Add(1)
 					})
 				}
@@ -130,25 +130,25 @@ func TestWorkerConcurrentStartAndClose(t *testing.T) {
 			return counter.Load() > targetClose
 		})
 
-		require.NoError(t, w.Close(xtest.ContextWithCommonTimeout(ctx, t), nil))
+		require.NoError(t, worker.Close(xtest.ContextWithCommonTimeout(ctx, t), nil))
 
 		stopNewStarts.Store(true)
 		xtest.WaitGroup(t, &wgStarters)
 
-		_, ok := <-w.tasks
+		_, ok := <-worker.tasks
 		require.False(t, ok)
-		require.True(t, w.closed)
+		require.True(t, worker.closed)
 	})
 }
 
 func TestWorkerStartCompletedWhileLongWait(t *testing.T) {
 	xtest.TestManyTimes(t, func(t testing.TB) {
 		ctx := xtest.Context(t)
-		w := NewWorker(ctx, "test-worker, "+t.Name())
+		worker := NewWorker(ctx, "test-worker, "+t.Name())
 
 		allowStop := make(empty.Chan)
 		closeStarted := make(empty.Chan)
-		w.Start("test", func(ctx context.Context) {
+		worker.Start("test", func(ctx context.Context) {
 			<-ctx.Done()
 			close(closeStarted)
 
@@ -163,7 +163,7 @@ func TestWorkerStartCompletedWhileLongWait(t *testing.T) {
 			start := time.Now()
 
 			for time.Since(start) < time.Millisecond {
-				w.Start("test2", func(ctx context.Context) {
+				worker.Start("test2", func(ctx context.Context) {
 					// pass
 				})
 			}
@@ -172,7 +172,7 @@ func TestWorkerStartCompletedWhileLongWait(t *testing.T) {
 		go func() {
 			defer close(closed)
 
-			_ = w.Close(ctx, nil)
+			_ = worker.Close(ctx, nil)
 		}()
 
 		xtest.WaitChannelClosed(t, callStartFinished)

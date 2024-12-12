@@ -55,8 +55,8 @@ func WithParseErrorHandler(errorHandler func(error)) fromConfigOption {
 	}
 }
 
-func createByType(t balancerType) (*balancerConfig.Config, error) {
-	switch t {
+func createByType(bType balancerType) (*balancerConfig.Config, error) {
+	switch bType {
 	case typeDisable:
 		return SingleConn(), nil
 	case typeSingle:
@@ -66,81 +66,81 @@ func createByType(t balancerType) (*balancerConfig.Config, error) {
 	case typeRoundRobin:
 		return RoundRobin(), nil
 	default:
-		return nil, xerrors.WithStackTrace(fmt.Errorf("unknown type of balancer: %s", t))
+		return nil, xerrors.WithStackTrace(fmt.Errorf("unknown type of balancer: %s", bType))
 	}
 }
 
-func CreateFromConfig(s string) (*balancerConfig.Config, error) {
+func CreateFromConfig(str string) (*balancerConfig.Config, error) {
 	// try to parse s as identifier of balancer
-	if c, err := createByType(balancerType(s)); err == nil {
+	if c, err := createByType(balancerType(str)); err == nil {
 		return c, nil
 	}
 
 	var (
-		b   *balancerConfig.Config
-		err error
-		c   balancersConfig
+		balancerCfg *balancerConfig.Config
+		err         error
+		cfgBalancer balancersConfig
 	)
 
 	// try to parse s as json
-	if err = json.Unmarshal([]byte(s), &c); err != nil {
+	if err = json.Unmarshal([]byte(str), &cfgBalancer); err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	b, err = createByType(c.Type)
+	balancerCfg, err = createByType(cfgBalancer.Type)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	switch c.Prefer {
+	switch cfgBalancer.Prefer {
 	case preferTypeLocalDC:
-		if c.Fallback {
-			return PreferNearestDCWithFallBack(b), nil
+		if cfgBalancer.Fallback {
+			return PreferNearestDCWithFallBack(balancerCfg), nil
 		}
 
-		return PreferNearestDC(b), nil
+		return PreferNearestDC(balancerCfg), nil
 	case preferTypeNearestDC:
-		if c.Fallback {
-			return PreferNearestDCWithFallBack(b), nil
+		if cfgBalancer.Fallback {
+			return PreferNearestDCWithFallBack(balancerCfg), nil
 		}
 
-		return PreferNearestDC(b), nil
+		return PreferNearestDC(balancerCfg), nil
 	case preferTypeLocations:
-		if len(c.Locations) == 0 {
-			return nil, xerrors.WithStackTrace(fmt.Errorf("empty locations list in balancer '%s' config", c.Type))
+		if len(cfgBalancer.Locations) == 0 {
+			return nil, xerrors.WithStackTrace(fmt.Errorf("empty locations list in balancer '%s' config", cfgBalancer.Type))
 		}
-		if c.Fallback {
-			return PreferLocationsWithFallback(b, c.Locations...), nil
+		if cfgBalancer.Fallback {
+			return PreferLocationsWithFallback(balancerCfg, cfgBalancer.Locations...), nil
 		}
 
-		return PreferLocations(b, c.Locations...), nil
+		return PreferLocations(balancerCfg, cfgBalancer.Locations...), nil
 	default:
-		return b, nil
+		return balancerCfg, nil
 	}
 }
 
 func FromConfig(config string, opts ...fromConfigOption) *balancerConfig.Config {
 	var (
-		h = fromConfigOptionsHolder{
+		holder = fromConfigOptionsHolder{
 			fallbackBalancer: Default(),
 		}
-		b   *balancerConfig.Config
-		err error
+		balancerCfg *balancerConfig.Config
+		err         error
 	)
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&h)
+			opt(&holder)
 		}
 	}
 
-	b, err = CreateFromConfig(config)
+	balancerCfg, err = CreateFromConfig(config)
 	if err != nil {
-		if h.errorHandler != nil {
-			h.errorHandler(err)
+		if holder.errorHandler != nil {
+			holder.errorHandler(err)
 		}
 
-		return h.fallbackBalancer
+		return holder.fallbackBalancer
 	}
 
-	return b
+	return balancerCfg
 }

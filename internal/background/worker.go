@@ -50,7 +50,7 @@ func (b *Worker) Context() context.Context {
 	return b.ctx
 }
 
-func (b *Worker) Start(name string, f CallbackFunc) {
+func (b *Worker) Start(name string, fn CallbackFunc) {
 	b.init()
 
 	b.m.WithLock(func() {
@@ -59,7 +59,7 @@ func (b *Worker) Start(name string, f CallbackFunc) {
 		}
 
 		b.tasks <- backgroundTask{
-			callback: f,
+			callback: fn,
 			name:     name,
 		}
 	})

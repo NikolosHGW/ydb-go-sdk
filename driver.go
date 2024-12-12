@@ -394,17 +394,77 @@ func driverFromOptions(ctx context.Context, opts ...Option) (_ *Driver, err erro
 	}
 	if currentDriver.logger != nil {
 		for _, opt := range []Option{
-			WithTraceDriver(log.Driver(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),       //nolint:contextcheck
-			WithTraceTable(log.Table(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),         //nolint:contextcheck
-			WithTraceQuery(log.Query(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),         //nolint:contextcheck
-			WithTraceScripting(log.Scripting(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)), //nolint:contextcheck
+			WithTraceDriver(
+				log.Driver(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
+			WithTraceTable(
+				log.Table(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
+			WithTraceQuery(
+				log.Query(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
+			WithTraceScripting(
+				log.Scripting(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
 			WithTraceScheme(log.Scheme(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),
-			WithTraceCoordination(log.Coordination(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),
-			WithTraceRatelimiter(log.Ratelimiter(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),
-			WithTraceDiscovery(log.Discovery(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),     //nolint:contextcheck
-			WithTraceTopic(log.Topic(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),             //nolint:contextcheck
-			WithTraceDatabaseSQL(log.DatabaseSQL(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)), //nolint:contextcheck
-			WithTraceRetry(log.Retry(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),             //nolint:contextcheck
+			WithTraceCoordination(
+				log.Coordination(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			),
+			WithTraceRatelimiter(
+				log.Ratelimiter(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			),
+			WithTraceDiscovery(
+				log.Discovery(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
+			WithTraceTopic(
+				log.Topic(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
+			WithTraceDatabaseSQL(
+				log.DatabaseSQL(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
+			WithTraceRetry(
+				log.Retry(
+					currentDriver.logger,
+					currentDriver.loggerDetails,
+					currentDriver.loggerOpts...,
+				),
+			), //nolint:contextcheck
 		} {
 			if opt != nil {
 				err = opt(ctx, currentDriver)

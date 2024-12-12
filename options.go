@@ -45,13 +45,13 @@ func WithStaticCredentials(user, password string) Option {
 }
 
 func WithStaticCredentialsLogin(login string) Option {
-	return func(ctx context.Context, d *Driver) error {
-		if d.userInfo == nil {
-			d.userInfo = &dsn.UserInfo{
+	return func(ctx context.Context, drv *Driver) error {
+		if drv.userInfo == nil {
+			drv.userInfo = &dsn.UserInfo{
 				User: login,
 			}
 		} else {
-			d.userInfo.User = login
+			drv.userInfo.User = login
 		}
 
 		return nil
@@ -59,13 +59,13 @@ func WithStaticCredentialsLogin(login string) Option {
 }
 
 func WithStaticCredentialsPassword(password string) Option {
-	return func(ctx context.Context, d *Driver) error {
-		if d.userInfo == nil {
-			d.userInfo = &dsn.UserInfo{
+	return func(ctx context.Context, drv *Driver) error {
+		if drv.userInfo == nil {
+			drv.userInfo = &dsn.UserInfo{
 				Password: password,
 			}
 		} else {
-			d.userInfo.Password = password
+			drv.userInfo.Password = password
 		}
 
 		return nil
@@ -196,7 +196,7 @@ func WithRequestsType(requestsType string) Option {
 //
 // (Driver string will be required string param of ydb.Open)
 func WithConnectionString(connectionString string) Option {
-	return func(ctx context.Context, d *Driver) error {
+	return func(ctx context.Context, drv *Driver) error {
 		if connectionString == "" {
 			return nil
 		}
@@ -206,8 +206,8 @@ func WithConnectionString(connectionString string) Option {
 				fmt.Errorf("parse connection string '%s' failed: %w", connectionString, err),
 			)
 		}
-		d.options = append(d.options, info.Options...)
-		d.userInfo = info.UserInfo
+		drv.options = append(drv.options, info.Options...)
+		drv.userInfo = info.UserInfo
 
 		return nil
 	}
@@ -448,13 +448,13 @@ func WithCertificatesFromFile(caFile string, opts ...certificates.FromFileOption
 		caFile = file
 	}
 
-	return func(ctx context.Context, d *Driver) error {
+	return func(ctx context.Context, drv *Driver) error {
 		certs, err := certificates.FromFile(caFile, opts...)
 		if err != nil {
 			return xerrors.WithStackTrace(err)
 		}
 		for _, cert := range certs {
-			if err := WithCertificate(cert)(ctx, d); err != nil {
+			if err := WithCertificate(cert)(ctx, drv); err != nil {
 				return xerrors.WithStackTrace(err)
 			}
 		}
@@ -477,13 +477,13 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 
 // WithCertificatesFromPem appends certificates from pem-encoded data to TLS config root certificates
 func WithCertificatesFromPem(bytes []byte, opts ...certificates.FromPemOption) Option {
-	return func(ctx context.Context, d *Driver) error {
+	return func(ctx context.Context, drv *Driver) error {
 		certs, err := certificates.FromPem(bytes, opts...)
 		if err != nil {
 			return xerrors.WithStackTrace(err)
 		}
 		for _, cert := range certs {
-			_ = WithCertificate(cert)(ctx, d)
+			_ = WithCertificate(cert)(ctx, drv)
 		}
 
 		return nil
@@ -676,13 +676,13 @@ func WithTraceQuery(t trace.Query, opts ...trace.QueryComposeOption) Option { //
 
 // WithTraceScripting scripting trace option
 func WithTraceScripting(t trace.Scripting, opts ...trace.ScriptingComposeOption) Option {
-	return func(ctx context.Context, d *Driver) error {
-		d.scriptingOptions = append(d.scriptingOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.scriptingOptions = append(drv.scriptingOptions,
 			scriptingConfig.WithTrace(
 				t,
 				append(
 					[]trace.ScriptingComposeOption{
-						trace.WithScriptingPanicCallback(d.panicCallback),
+						trace.WithScriptingPanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
@@ -695,13 +695,13 @@ func WithTraceScripting(t trace.Scripting, opts ...trace.ScriptingComposeOption)
 
 // WithTraceScheme returns scheme trace option
 func WithTraceScheme(t trace.Scheme, opts ...trace.SchemeComposeOption) Option {
-	return func(ctx context.Context, d *Driver) error {
-		d.schemeOptions = append(d.schemeOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.schemeOptions = append(drv.schemeOptions,
 			schemeConfig.WithTrace(
 				t,
 				append(
 					[]trace.SchemeComposeOption{
-						trace.WithSchemePanicCallback(d.panicCallback),
+						trace.WithSchemePanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
@@ -714,13 +714,13 @@ func WithTraceScheme(t trace.Scheme, opts ...trace.SchemeComposeOption) Option {
 
 // WithTraceCoordination returns coordination trace option
 func WithTraceCoordination(t trace.Coordination, opts ...trace.CoordinationComposeOption) Option { //nolint:gocritic
-	return func(ctx context.Context, d *Driver) error {
-		d.coordinationOptions = append(d.coordinationOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.coordinationOptions = append(drv.coordinationOptions,
 			coordinationConfig.WithTrace(
 				&t,
 				append(
 					[]trace.CoordinationComposeOption{
-						trace.WithCoordinationPanicCallback(d.panicCallback),
+						trace.WithCoordinationPanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
@@ -761,13 +761,13 @@ func WithRatelimiterOptions(opts ...ratelimiterConfig.Option) Option {
 
 // WithTraceDiscovery adds configured discovery tracer to Driver
 func WithTraceDiscovery(t trace.Discovery, opts ...trace.DiscoveryComposeOption) Option {
-	return func(ctx context.Context, d *Driver) error {
-		d.discoveryOptions = append(d.discoveryOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.discoveryOptions = append(drv.discoveryOptions,
 			discoveryConfig.WithTrace(
 				t,
 				append(
 					[]trace.DiscoveryComposeOption{
-						trace.WithDiscoveryPanicCallback(d.panicCallback),
+						trace.WithDiscoveryPanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
@@ -780,13 +780,13 @@ func WithTraceDiscovery(t trace.Discovery, opts ...trace.DiscoveryComposeOption)
 
 // WithTraceTopic adds configured discovery tracer to Driver
 func WithTraceTopic(t trace.Topic, opts ...trace.TopicComposeOption) Option { //nolint:gocritic
-	return func(ctx context.Context, d *Driver) error {
-		d.topicOptions = append(d.topicOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.topicOptions = append(drv.topicOptions,
 			topicoptions.WithTrace(
 				t,
 				append(
 					[]trace.TopicComposeOption{
-						trace.WithTopicPanicCallback(d.panicCallback),
+						trace.WithTopicPanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
