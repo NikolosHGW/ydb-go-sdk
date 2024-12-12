@@ -88,23 +88,23 @@ func (e *endpoint) NodeID() uint32 {
 	return e.id
 }
 
-func getResolvedAddr(e *endpoint, useV6 bool) string {
-	var ip string
+func getResolvedAddr(endp *endpoint, useV6 bool) string {
+	var resolvedIP string
 	if useV6 {
-		ip = "[" + e.ipv6[0] + "]"
+		resolvedIP = "[" + endp.ipv6[0] + "]"
 	} else {
-		ip = e.ipv4[0]
+		resolvedIP = endp.ipv4[0]
 	}
 
-	end := len(e.address)
+	end := len(endp.address)
 
 	for i := end - 1; i >= 0; i-- {
-		if e.address[i] == ':' {
-			return ip + e.address[i:]
+		if endp.address[i] == ':' {
+			return resolvedIP + endp.address[i:]
 		}
 	}
 
-	return e.address
+	return endp.address
 }
 
 func (e *endpoint) Address() (address string) {
@@ -228,15 +228,15 @@ func WithSslTargetNameOverride(nameOverride string) Option {
 }
 
 func New(address string, opts ...Option) *endpoint {
-	e := &endpoint{
+	endp := &endpoint{
 		address:     address,
 		lastUpdated: time.Now(),
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(e)
+			opt(endp)
 		}
 	}
 
-	return e
+	return endp
 }

@@ -29,19 +29,19 @@ var (
 	_ tx.Identifier         = &transaction{}
 )
 
-func beginTx(ctx context.Context, c *Conn, txOptions driver.TxOptions) (currentTx, error) {
+func beginTx(ctx context.Context, conn *Conn, txOptions driver.TxOptions) (currentTx, error) {
 	txc, err := isolation.ToYDB(txOptions)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
-	nativeTx, err := c.session.BeginTransaction(ctx, table.TxSettings(txc))
+	nativeTx, err := conn.session.BeginTransaction(ctx, table.TxSettings(txc))
 	if err != nil {
 		return nil, badconn.Map(xerrors.WithStackTrace(err))
 	}
 
 	return &transaction{
 		Identifier: tx.ID(nativeTx.ID()),
-		conn:       c,
+		conn:       conn,
 		ctx:        ctx,
 		tx:         nativeTx,
 	}, nil

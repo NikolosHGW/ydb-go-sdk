@@ -417,13 +417,13 @@ func (w *Writer) composeHookCall(fn *Func, h1, h2 string) {
 				_ = w.bw.WriteByte('\n')
 				w.atEOL = true
 			}
-			for i, h := range []string{h1, h2} {
-				w.line("if " + h + " != nil {")
+			for i, hookName := range []string{h1, h2} {
+				w.line("if " + hookName + " != nil {")
 				w.block(func() {
 					if fn.HasResult() {
 						w.code(rs[i], ` = `) //nolint:scopelint
 					}
-					w.code(h) //nolint:scopelint
+					w.code(hookName) //nolint:scopelint
 					w.call(args)
 				})
 				w.line("}")
@@ -525,7 +525,7 @@ func (w *Writer) hookFuncCall(fn *Func, name string, args []string) {
 		return
 	}
 
-	r, isFunc := fn.Result[0].(*Func)
+	result, isFunc := fn.Result[0].(*Func)
 	if isFunc {
 		w.line(`if `, res, ` == nil {`)
 		w.block(func() {
@@ -533,15 +533,15 @@ func (w *Writer) hookFuncCall(fn *Func, name string, args []string) {
 		})
 		w.line(`}`)
 
-		if r.HasResult() {
+		if result.HasResult() {
 			w.newScope(func() {
 				w.code(`return func`)
-				args := w.funcParams(r.Params)
+				args := w.funcParams(result.Params)
 				w.code(` `)
-				w.funcResults(r)
+				w.funcResults(result)
 				w.line(` {`)
 				w.block(func() {
-					w.hookFuncCall(r, res, args)
+					w.hookFuncCall(result, res, args)
 				})
 				w.line(`}`)
 			})

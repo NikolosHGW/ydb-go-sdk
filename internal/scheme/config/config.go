@@ -47,14 +47,14 @@ func With(config config.Common) Option {
 }
 
 func New(opts ...Option) *Config {
-	c := &Config{
+	config := &Config{
 		trace: &trace.Scheme{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(c)
+			opt(config)
 		}
 	}
 
-	return c
+	return config
 }

@@ -312,14 +312,14 @@ type (
 
 // TxSettings returns transaction settings
 func TxSettings(opts ...TxOption) *TransactionSettings {
-	s := new(TransactionSettings)
+	ts := new(TransactionSettings)
 	for _, opt := range opts {
 		if opt != nil {
-			opt((*txDesc)(&s.settings))
+			opt((*txDesc)(&ts.settings))
 		}
 	}
 
-	return s
+	return ts
 }
 
 // BeginTx returns begin transaction control option
@@ -374,14 +374,14 @@ func WithStaleReadOnly() TxOption {
 }
 
 func WithOnlineReadOnly(opts ...TxOnlineReadOnlyOption) TxOption {
-	return func(d *txDesc) {
+	return func(td *txDesc) {
 		var ro txOnlineReadOnly
 		for _, opt := range opts {
 			if opt != nil {
 				opt(&ro)
 			}
 		}
-		d.TxMode = &Ydb_Table.TransactionSettings_OnlineReadOnly{
+		td.TxMode = &Ydb_Table.TransactionSettings_OnlineReadOnly{
 			OnlineReadOnly: (*Ydb_Table.OnlineModeSettings)(&ro),
 		}
 	}
@@ -417,14 +417,14 @@ func (t *TransactionControl) Desc() *Ydb_Table.TransactionControl {
 
 // TxControl makes transaction control from given options
 func TxControl(opts ...TxControlOption) *TransactionControl {
-	c := new(TransactionControl)
+	tc := new(TransactionControl)
 	for _, opt := range opts {
 		if opt != nil {
-			opt((*txControlDesc)(&c.desc))
+			opt((*txControlDesc)(&tc.desc))
 		}
 	}
 
-	return c
+	return tc
 }
 
 // DefaultTxControl returns default transaction control with serializable read-write isolation mode and auto-commit
@@ -485,7 +485,7 @@ func NewQueryParameters(opts ...ParameterOption) *QueryParameters {
 	return &qp
 }
 
-func ValueParam(name string, v value.Value) ParameterOption {
+func ValueParam(name string, value value.Value) ParameterOption {
 	switch len(name) {
 	case 0:
 		panic("empty name")
@@ -495,7 +495,7 @@ func ValueParam(name string, v value.Value) ParameterOption {
 		}
 	}
 
-	return params.Named(name, v)
+	return params.Named(name, value)
 }
 
 type Options struct {

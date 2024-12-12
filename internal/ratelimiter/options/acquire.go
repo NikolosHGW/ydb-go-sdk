@@ -71,14 +71,14 @@ func WithOperationCancelAfter(operationCancelAfter time.Duration) AcquireOption 
 }
 
 func NewAcquire(opts ...AcquireOption) Acquire {
-	h := &acquireOptionsHolder{
+	holder := &acquireOptionsHolder{
 		acquireType: AcquireTypeDefault,
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(h)
+			opt(holder)
 		}
 	}
 
-	return h
+	return holder
 }

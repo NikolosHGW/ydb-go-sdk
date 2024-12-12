@@ -108,13 +108,13 @@ func (e *Entry) IsTopic() bool {
 	return e.Type == EntryTopic
 }
 
-func (e *Entry) From(y *Ydb_Scheme.Entry) {
+func (e *Entry) From(entry *Ydb_Scheme.Entry) {
 	*e = Entry{
-		Name:                 y.GetName(),
-		Owner:                y.GetOwner(),
-		Type:                 entryType(y.GetType()),
-		Permissions:          makePermissions(y.GetPermissions()),
-		EffectivePermissions: makePermissions(y.GetEffectivePermissions()),
+		Name:                 entry.GetName(),
+		Owner:                entry.GetOwner(),
+		Type:                 entryType(entry.GetType()),
+		Permissions:          makePermissions(entry.GetPermissions()),
+		EffectivePermissions: makePermissions(entry.GetEffectivePermissions()),
 	}
 }
 

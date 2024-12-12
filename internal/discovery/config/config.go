@@ -29,7 +29,7 @@ type Config struct {
 }
 
 func New(opts ...Option) *Config {
-	c := &Config{
+	config := &Config{
 		interval: DefaultInterval,
 		trace:    &trace.Discovery{},
 		addressMutator: func(address string) string {
@@ -39,11 +39,11 @@ func New(opts ...Option) *Config {
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(c)
+			opt(config)
 		}
 	}
 
-	return c
+	return config
 }
 
 func (c *Config) MutateAddress(fqdn string) string {
@@ -142,14 +142,14 @@ func WithTrace(trace trace.Discovery, opts ...trace.DiscoveryComposeOption) Opti
 //
 // If Interval is negative, then no background discovery prepared.
 func WithInterval(interval time.Duration) Option {
-	return func(c *Config) {
+	return func(config *Config) {
 		switch {
 		case interval < 0:
-			c.interval = 0
+			config.interval = 0
 		case interval == 0:
-			c.interval = DefaultInterval
+			config.interval = DefaultInterval
 		default:
-			c.interval = interval
+			config.interval = interval
 		}
 	}
 }

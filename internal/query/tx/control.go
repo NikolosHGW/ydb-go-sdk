@@ -27,13 +27,13 @@ type (
 	}
 )
 
-func (ctrl *Control) ToYDB(a *allocator.Allocator) *Ydb_Query.TransactionControl {
+func (ctrl *Control) ToYDB(alloc *allocator.Allocator) *Ydb_Query.TransactionControl {
 	if ctrl == nil {
 		return nil
 	}
 
-	txControl := a.QueryTransactionControl()
-	ctrl.selector.applyTxSelector(a, txControl)
+	txControl := alloc.QueryTransactionControl()
+	ctrl.selector.applyTxSelector(alloc, txControl)
 	txControl.CommitTx = ctrl.Commit
 
 	return txControl

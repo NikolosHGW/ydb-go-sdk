@@ -60,11 +60,11 @@ func main() {
 	var writers []*Writer
 	if isGoGenerate {
 		openFile := func(name string) (*os.File, func()) {
-			var f *os.File
+			var file *os.File
 			//nolint:gofumpt
 			//nolint:nolintlint
 			//nolint:gosec
-			f, err = os.OpenFile(
+			file, err = os.OpenFile(
 				filepath.Join(workDir, filepath.Clean(name)),
 				os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
 				0o600, //nolint:gomnd
@@ -73,7 +73,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			return f, func() { f.Close() }
+			return file, func() { file.Close() }
 		}
 		ext := filepath.Ext(gofile)
 		name := strings.TrimSuffix(gofile, ext)
@@ -199,7 +199,7 @@ func main() {
 			return true
 		})
 	}
-	p := Package{
+	packageObject := Package{
 		Package:          pkg,
 		BuildConstraints: buildConstraints,
 	}
@@ -208,11 +208,11 @@ func main() {
 		t := &Trace{
 			Name: item.Ident.Name,
 		}
-		p.Traces = append(p.Traces, t)
+		packageObject.Traces = append(packageObject.Traces, t)
 		traces[item.Ident.Name] = t
 	}
 	for i, item := range items {
-		t := p.Traces[i]
+		t := packageObject.Traces[i]
 		for _, field := range item.StructType.Fields.List {
 			if _, ok := field.Type.(*ast.FuncType); !ok {
 				continue
@@ -238,7 +238,7 @@ func main() {
 		}
 	}
 	for _, w := range writers {
-		if err := w.Write(p); err != nil {
+		if err := w.Write(packageObject); err != nil {
 			panic(err)
 		}
 	}
@@ -248,13 +248,13 @@ func main() {
 
 func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (ret *Func, err error) {
 	ret = new(Func)
-	for _, p := range fn.Params.List {
-		t := info.TypeOf(p.Type)
+	for _, param := range fn.Params.List {
+		t := info.TypeOf(param.Type)
 		if t == nil {
-			log.Fatalf("unknown type: %s", p.Type)
+			log.Fatalf("unknown type: %s", param.Type)
 		}
 		var names []string
-		for _, n := range p.Names {
+		for _, n := range param.Names {
 			name := n.Name
 			if name == "_" {
 				name = ""
@@ -283,9 +283,9 @@ func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (re
 
 	r := fn.Results.List[0]
 
-	switch x := r.Type.(type) {
+	switch expr := r.Type.(type) {
 	case *ast.FuncType:
-		result, err := buildFunc(info, traces, x)
+		result, err := buildFunc(info, traces, expr)
 		if err != nil {
 			return nil, xerrors.WithStackTrace(err)
 		}
@@ -294,7 +294,7 @@ func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (re
 		return ret, nil
 
 	case *ast.Ident:
-		if t, ok := traces[x.Name]; ok {
+		if t, ok := traces[expr.Name]; ok {
 			t.Nested = true
 			ret.Result = append(ret.Result, t)
 

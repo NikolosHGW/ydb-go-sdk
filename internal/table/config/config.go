@@ -32,14 +32,14 @@ const (
 )
 
 func New(opts ...Option) *Config {
-	c := defaults()
+	config := defaults()
 	for _, opt := range opts {
 		if opt != nil {
-			opt(c)
+			opt(config)
 		}
 	}
 
-	return c
+	return config
 }
 
 type Option func(*Config)

@@ -57,16 +57,16 @@ func New(
 }
 
 func newTopicConfig(opts ...topicoptions.TopicOption) topic.Config {
-	c := topic.Config{
+	config := topic.Config{
 		Trace: &trace.Topic{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&c)
+			opt(&config)
 		}
 	}
 
-	return c
+	return config
 }
 
 // Close the client

@@ -288,17 +288,17 @@ func ExcludeGRPCCodesForPessimization(codes ...grpcCodes.Code) Option {
 }
 
 func New(opts ...Option) *Config {
-	c := defaultConfig()
+	config := defaultConfig()
 
 	for _, opt := range opts {
 		if opt != nil {
-			opt(c)
+			opt(config)
 		}
 	}
 
-	c.meta = meta.New(c.database, c.credentials, c.trace, c.metaOptions...)
+	config.meta = meta.New(config.database, config.credentials, config.trace, config.metaOptions...)
 
-	return c
+	return config
 }
 
 // With makes copy of current Config with specified options

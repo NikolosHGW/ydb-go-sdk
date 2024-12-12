@@ -404,14 +404,14 @@ func (a *structAllocator) Struct() (v *Ydb.StructType) {
 }
 
 func (a *structAllocator) free() {
-	for _, v := range a.allocations {
-		members := v.GetMembers()
+	for _, value := range a.allocations {
+		members := value.GetMembers()
 		for i := range members {
 			members[i] = nil
 		}
-		v.Reset()
-		v.Members = members[:0]
-		structPool.Put(v)
+		value.Reset()
+		value.Members = members[:0]
+		structPool.Put(value)
 	}
 	a.allocations = a.allocations[:0]
 }
@@ -466,14 +466,14 @@ func (a *tupleAllocator) Tuple() (v *Ydb.TupleType) {
 }
 
 func (a *tupleAllocator) free() {
-	for _, v := range a.allocations {
-		elements := v.GetElements()
+	for _, value := range a.allocations {
+		elements := value.GetElements()
 		for i := range elements {
 			elements[i] = nil
 		}
-		v.Reset()
-		v.Elements = elements[:0]
-		tuplePool.Put(v)
+		value.Reset()
+		value.Elements = elements[:0]
+		tuplePool.Put(value)
 	}
 	a.allocations = a.allocations[:0]
 }
@@ -737,19 +737,19 @@ func (a *valueAllocator) Value() (v *Ydb.Value) {
 }
 
 func (a *valueAllocator) free() {
-	for _, v := range a.allocations {
-		items := v.GetItems()
-		pairs := v.GetPairs()
+	for _, value := range a.allocations {
+		items := value.GetItems()
+		pairs := value.GetPairs()
 		for i := range items {
 			items[i] = nil
 		}
 		for i := range pairs {
 			pairs[i] = nil
 		}
-		v.Reset()
-		v.Items = items[:0]
-		v.Pairs = pairs[:0]
-		valuePool.Put(v)
+		value.Reset()
+		value.Items = items[:0]
+		value.Pairs = pairs[:0]
+		valuePool.Put(value)
 	}
 	a.allocations = a.allocations[:0]
 }

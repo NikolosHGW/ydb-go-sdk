@@ -40,14 +40,14 @@ type Issue struct {
 	Issues  Issues
 }
 
-func (issue *Issue) FromProto(p *Ydb_Issue.IssueMessage) error {
-	if p == nil {
+func (issue *Issue) FromProto(proto *Ydb_Issue.IssueMessage) error {
+	if proto == nil {
 		return xerrors.WithStackTrace(errors.New("receive nil issue message pointer from protobuf"))
 	}
-	issue.Code = p.GetIssueCode()
-	issue.Message = p.GetMessage()
+	issue.Code = proto.GetIssueCode()
+	issue.Message = proto.GetMessage()
 
-	return issue.Issues.FromProto(p.GetIssues())
+	return issue.Issues.FromProto(proto.GetIssues())
 }
 
 func (issue *Issue) String() string {

@@ -204,6 +204,10 @@ linters-settings:
         # Whether to check exported functions.
         # Default: false
         checkExported: true
+  varnamelen:
+    min-name-length: 2
+    ignore-names:
+      - i
 linters:
   enable-all: true
   disable:
@@ -235,7 +239,6 @@ linters:
     - testifylint
     - testpackage
     - thelper
-    - varnamelen
     - wrapcheck
     - wsl
 

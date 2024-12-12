@@ -20,20 +20,20 @@ type FunctionIDArg struct {
 }
 
 func ReadFile(filename string, info fs.FileInfo) ([]byte, error) {
-	f, err := os.Open(filename)
+	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer file.Close()
 	size := int(info.Size())
 	src := make([]byte, size)
-	n, err := io.ReadFull(f, src)
+	numBytes, err := io.ReadFull(file, src)
 	if err != nil {
 		return nil, err
 	}
-	if n < size {
-		return nil, fmt.Errorf("error: size of %q changed during reading (from %d to %d bytes)", filename, size, n)
-	} else if n > size {
+	if numBytes < size {
+		return nil, fmt.Errorf("error: size of %q changed during reading (from %d to %d bytes)", filename, size, numBytes)
+	} else if numBytes > size {
 		return nil, fmt.Errorf("error: size of %q changed during reading (from %d to >=%d bytes)", filename, size, len(src))
 	}
 

@@ -162,16 +162,16 @@ func (c *Conn) execContext(
 		return c.currentTx.ExecContext(ctx, query, args)
 	}
 
-	m := queryModeFromContext(ctx, c.defaultQueryMode)
+	queryMode := queryModeFromContext(ctx, c.defaultQueryMode)
 	onDone := trace.DatabaseSQLOnConnExec(c.parent.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/table/conn.(*Conn).execContext"),
-		query, m.String(), xcontext.IsIdempotent(ctx), c.parent.Clock().Since(c.LastUsage()),
+		query, queryMode.String(), xcontext.IsIdempotent(ctx), c.parent.Clock().Since(c.LastUsage()),
 	)
 	defer func() {
 		onDone(finalErr)
 	}()
 
-	switch m {
+	switch queryMode {
 	case DataQueryMode:
 		return c.executeDataQuery(ctx, query, args)
 	case SchemeQueryMode:
@@ -179,7 +179,7 @@ func (c *Conn) execContext(
 	case ScriptingQueryMode:
 		return c.executeScriptingQuery(ctx, query, args)
 	default:
-		return nil, fmt.Errorf("unsupported query mode '%s' for execute query", m)
+		return nil, fmt.Errorf("unsupported query mode '%s' for execute query", queryMode)
 	}
 }
 

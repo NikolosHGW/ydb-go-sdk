@@ -76,7 +76,7 @@ func (c *Client) execute(
 			stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/scripting.(*Client).execute"),
 			query, parameters,
 		)
-		a       = allocator.New()
+		alloc   = allocator.New()
 		request = &Ydb_Scripting.ExecuteYqlRequest{
 			Script: query,
 			OperationParams: operation.Params(
@@ -90,11 +90,11 @@ func (c *Client) execute(
 		response *Ydb_Scripting.ExecuteYqlResponse
 	)
 	defer func() {
-		a.Free()
+		alloc.Free()
 		onDone(r, err)
 	}()
 
-	params, err := parameters.ToYDB(a)
+	params, err := parameters.ToYDB(alloc)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -239,7 +239,7 @@ func (c *Client) streamExecute(
 			stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/scripting.(*Client).streamExecute"),
 			query, parameters,
 		)
-		a       = allocator.New()
+		alloc   = allocator.New()
 		request = &Ydb_Scripting.ExecuteYqlRequest{
 			Script: query,
 			OperationParams: operation.Params(
@@ -251,13 +251,13 @@ func (c *Client) streamExecute(
 		}
 	)
 	defer func() {
-		a.Free()
+		alloc.Free()
 		if err != nil {
 			onIntermediate(err)(err)
 		}
 	}()
 
-	params, err := parameters.ToYDB(a)
+	params, err := parameters.ToYDB(alloc)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}

@@ -32,16 +32,16 @@ func WithSeed(seed int64) option {
 }
 
 func New(opts ...option) Rand {
-	r := &r{
+	rand := &r{
 		r: rand.New(rand.NewSource(time.Now().Unix())), //nolint:gosec
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(r)
+			opt(rand)
 		}
 	}
 
-	return r
+	return rand
 }
 
 func (r *r) int64n(max int64) int64 {
@@ -61,11 +61,11 @@ func (r *r) Int(max int) int {
 	return int(r.int64n(int64(max)))
 }
 
-func (r *r) Shuffle(n int, swap func(i, j int)) {
+func (r *r) Shuffle(numElements int, swap func(i, j int)) {
 	if r.m != nil {
 		r.m.Lock()
 		defer r.m.Unlock()
 	}
 
-	r.r.Shuffle(n, swap)
+	r.r.Shuffle(numElements, swap)
 }
