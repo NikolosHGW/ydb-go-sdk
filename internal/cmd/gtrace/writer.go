@@ -103,23 +103,23 @@ func (w *Writer) declare(name string) string {
 	if isPredeclared(name) {
 		name = firstChar(name)
 	}
-	s, ok := w.scope.Back().Value.(*scope)
+	scp, ok := w.scope.Back().Value.(*scope)
 	if !ok {
-		panic(fmt.Sprintf("unsupported type conversion from %T to *scope", s))
+		panic(fmt.Sprintf("unsupported type conversion from %T to *scope", scp))
 	}
 	for i := 0; ; i++ {
-		v := name
+		value := name
 		if i > 0 {
-			v += strconv.Itoa(i)
+			value += strconv.Itoa(i)
 		}
-		if token.IsKeyword(v) {
+		if token.IsKeyword(value) {
 			continue
 		}
-		if w.isGlobalScope() && w.pkg.Scope().Lookup(v) != nil {
+		if w.isGlobalScope() && w.pkg.Scope().Lookup(value) != nil {
 			continue
 		}
-		if s.set(v) {
-			return v
+		if scp.set(value) {
+			return value
 		}
 	}
 }
@@ -220,15 +220,15 @@ func (w *Writer) traceImports(dst []dep, t *Trace) []dep {
 func (w *Writer) importDeps(deps []dep) {
 	seen := map[string]bool{}
 	for i := 0; i < len(deps); {
-		d := deps[i]
-		if seen[d.pkgPath] {
+		dep := deps[i]
+		if seen[dep.pkgPath] {
 			n := len(deps)
 			deps[i], deps[n-1] = deps[n-1], deps[i]
 			deps = deps[:n-1]
 
 			continue
 		}
-		seen[d.pkgPath] = true
+		seen[dep.pkgPath] = true
 		i++
 	}
 	if len(deps) == 0 {
@@ -327,17 +327,27 @@ func (w *Writer) isZero(trace *Trace) {
 
 func (w *Writer) compose(trace *Trace) {
 	w.newScope(func() {
-		t := w.declare("t")
-		x := w.declare("x")
+		tDeclared := w.declare("t")
+		xDeclared := w.declare("x")
 		ret := w.declare("ret")
 		w.line(`// Compose returns a new `, trace.Name, ` which has functional fields composed both from `,
-			t, ` and `, x, `.`,
+			tDeclared, ` and `, xDeclared, `.`,
 		)
 		w.line(`// Internals: https://github.com/ydb-platform/ydb-go-sdk/blob/master/VERSIONING.md#internals`)
-		w.code(`func (`, t, ` *`, trace.Name, `) Compose(`, x, ` *`, trace.Name, `, opts ...`+trace.Name+`ComposeOption) `)
+		w.code(
+			`func (`,
+			tDeclared,
+			` *`,
+			trace.Name,
+			`) Compose(`,
+			xDeclared,
+			` *`,
+			trace.Name,
+			`, opts ...`+trace.Name+`ComposeOption) `,
+		)
 		w.line(`*`, trace.Name, ` {`)
 		w.block(func() {
-			w.line(`if `, t, ` == nil {`)
+			w.line(`if `, tDeclared, ` == nil {`)
 			w.block(func() {
 				w.line(`return x`)
 			})
@@ -356,7 +366,7 @@ func (w *Writer) compose(trace *Trace) {
 				w.line(`}`)
 			}
 			for _, hook := range trace.Hooks {
-				w.composeHook(hook, t, x, ret+"."+hook.Name)
+				w.composeHook(hook, tDeclared, xDeclared, ret+"."+hook.Name)
 			}
 			w.line(`return &`, ret)
 		})
@@ -478,10 +488,10 @@ func (w *Writer) options(trace *Trace) {
 
 func (w *Writer) hook(trace *Trace, hook Hook) {
 	w.newScope(func() {
-		t := w.declare("t")
+		tDeclared := w.declare("t")
 		fn := w.declare("fn")
 
-		w.code(`func (`, t, ` *`, trace.Name, `) `, unexported(hook.Name))
+		w.code(`func (`, tDeclared, ` *`, trace.Name, `) `, unexported(hook.Name))
 
 		w.code(`(`)
 		var args []string
@@ -498,7 +508,7 @@ func (w *Writer) hook(trace *Trace, hook Hook) {
 		w.funcResultsFlags(hook.Func, docs)
 		w.line(` {`)
 		w.block(func() {
-			w.line(fn, ` := `, t, `.`, hook.Name)
+			w.line(fn, ` := `, tDeclared, `.`, hook.Name)
 			w.line(`if `, fn, ` == nil {`)
 			w.block(func() {
 				w.zeroReturn(hook.Func)
@@ -595,13 +605,13 @@ func typeBasename(t types.Type) (name string) {
 }
 
 func flattenStruct(dst []Param, s *types.Struct) []Param {
-	forEachField(s, func(f *types.Var) {
-		if !f.Exported() {
+	forEachField(s, func(field *types.Var) {
+		if !field.Exported() {
 			return
 		}
 		var (
-			name = f.Name()
-			typ  = f.Type()
+			name = field.Name()
+			typ  = field.Type()
 		)
 		if name == typeBasename(typ) {
 			// NOTE: field name essentially be empty for embedded structs or
@@ -636,20 +646,20 @@ func (w *Writer) constructParams(params []Param, names []string) (res []string) 
 }
 
 func (w *Writer) constructStruct(n types.Type, s *types.Struct, vars []string) (string, []string) {
-	p := w.declare("p")
+	pDeclared := w.declare("p")
 	// maybe skip pointers from flattening to not allocate anyhing during trace.
-	w.line(`var `, p, ` `, w.typeString(n))
+	w.line(`var `, pDeclared, ` `, w.typeString(n))
 	for i := 0; i < s.NumFields(); i++ {
-		v := s.Field(i)
-		if !v.Exported() {
+		variable := s.Field(i)
+		if !variable.Exported() {
 			continue
 		}
 		name := vars[0]
 		vars = vars[1:]
-		w.line(p, `.`, v.Name(), ` = `, name)
+		w.line(pDeclared, `.`, variable.Name(), ` = `, name)
 	}
 
-	return p, vars
+	return pDeclared, vars
 }
 
 func (w *Writer) hookShortcut(trace *Trace, hook Hook) {
@@ -658,12 +668,12 @@ func (w *Writer) hookShortcut(trace *Trace, hook Hook) {
 	w.mustDeclare(name)
 
 	w.newScope(func() {
-		t := w.declare("t")
+		tDeclared := w.declare("t")
 		w.line(`// Internals: https://github.com/ydb-platform/ydb-go-sdk/blob/master/VERSIONING.md#internals`)
 		w.code(`func `, name)
 		w.code(`(`)
 		var ctx string
-		w.code(t, ` *`, trace.Name)
+		w.code(tDeclared, ` *`, trace.Name)
 
 		var (
 			params = flattenParams(hook.Func.Params)
@@ -689,7 +699,7 @@ func (w *Writer) hookShortcut(trace *Trace, hook Hook) {
 				res = w.declare("res")
 				w.code(res, ` := `)
 			}
-			w.code(t, `.`, unexported(hook.Name))
+			w.code(tDeclared, `.`, unexported(hook.Name))
 			if ctx != "" {
 				vars = append([]string{ctx}, vars...)
 			}
@@ -766,16 +776,16 @@ func (w *Writer) zeroReturn(fn *Func) {
 		return
 	}
 	w.code(`return `)
-	switch x := fn.Result[0].(type) {
+	switch res := fn.Result[0].(type) {
 	case *Func:
-		w.funcSignature(x)
+		w.funcSignature(res)
 		w.line(` {`)
 		w.block(func() {
-			w.zeroReturn(x)
+			w.zeroReturn(res)
 		})
 		w.line(`}`)
 	case *Trace:
-		w.line(x.Name, `{}`)
+		w.line(res.Name, `{}`)
 	default:
 		panic("unexpected result type")
 	}
@@ -802,13 +812,13 @@ func (w *Writer) funcParam(p *Param) (name string) {
 	return name
 }
 
-func (w *Writer) funcParamSign(p *Param) {
-	name := nameParam(p)
+func (w *Writer) funcParamSign(param *Param) {
+	name := nameParam(param)
 	if len(name) == 1 || isPredeclared(name) {
 		name = "_"
 	}
 	w.code(name, ` `)
-	w.code(w.typeString(p.Type))
+	w.code(w.typeString(param.Type))
 }
 
 type flags uint8
@@ -958,22 +968,22 @@ func (w *Writer) code(args ...string) {
 	}
 }
 
-func exported(s string) string {
-	r, size := utf8.DecodeRuneInString(s)
+func exported(str string) string {
+	r, size := utf8.DecodeRuneInString(str)
 	if r == utf8.RuneError {
 		panic("invalid string")
 	}
 
-	return string(unicode.ToUpper(r)) + s[size:]
+	return string(unicode.ToUpper(r)) + str[size:]
 }
 
-func unexported(s string) string {
-	r, size := utf8.DecodeRuneInString(s)
+func unexported(str string) string {
+	r, size := utf8.DecodeRuneInString(str)
 	if r == utf8.RuneError {
 		panic("invalid string")
 	}
 
-	return string(unicode.ToLower(r)) + s[size:]
+	return string(unicode.ToLower(r)) + str[size:]
 }
 
 func firstChar(s string) string {
@@ -985,21 +995,21 @@ func firstChar(s string) string {
 	return string(r)
 }
 
-func ident(s string) string {
+func ident(str string) string {
 	// Identifier must not begin with number.
-	for len(s) > 0 {
-		r, size := utf8.DecodeRuneInString(s)
+	for len(str) > 0 {
+		r, size := utf8.DecodeRuneInString(str)
 		if r == utf8.RuneError {
 			panic("invalid string")
 		}
 		if !unicode.IsNumber(r) {
 			break
 		}
-		s = s[size:]
+		str = str[size:]
 	}
 
 	// Filter out non letter/number/underscore characters.
-	s = strings.Map(func(r rune) rune {
+	str = strings.Map(func(r rune) rune {
 		switch {
 		case r == '_' ||
 			unicode.IsLetter(r) ||
@@ -1009,13 +1019,13 @@ func ident(s string) string {
 		default:
 			return -1
 		}
-	}, s)
+	}, str)
 
-	if !token.IsIdentifier(s) {
-		s = "_" + s
+	if !token.IsIdentifier(str) {
+		str = "_" + str
 	}
 
-	return s
+	return str
 }
 
 func tempName(names ...string) string {
@@ -1040,15 +1050,15 @@ type scope struct {
 	vars map[string]decl
 }
 
-func (s *scope) set(v string) bool {
+func (s *scope) set(variable string) bool {
 	if s.vars == nil {
 		s.vars = make(map[string]decl)
 	}
-	if _, has := s.vars[v]; has {
+	if _, has := s.vars[variable]; has {
 		return false
 	}
 	_, file, line, _ := runtime.Caller(2) //nolint:gomnd
-	s.vars[v] = decl{
+	s.vars[variable] = decl{
 		where: fmt.Sprintf("%s:%d", file, line),
 	}
 

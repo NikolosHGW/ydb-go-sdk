@@ -151,8 +151,8 @@ func main() {
 			depth int
 			item  *GenItem
 		)
-		ast.Inspect(astFile, func(n ast.Node) (next bool) {
-			if n == nil {
+		ast.Inspect(astFile, func(astNode ast.Node) (next bool) {
+			if astNode == nil {
 				item = nil
 				depth--
 
@@ -164,19 +164,19 @@ func main() {
 				}
 			}()
 
-			switch v := n.(type) {
+			switch typedNode := astNode.(type) {
 			case *ast.FuncDecl, *ast.ValueSpec:
 				return false
 
 			case *ast.Ident:
 				if item != nil {
-					item.Ident = v
+					item.Ident = typedNode
 				}
 
 				return false
 
 			case *ast.CommentGroup:
-				for _, c := range v.List {
+				for _, c := range typedNode.List {
 					if strings.Contains(strings.TrimPrefix(c.Text, "//"), "gtrace:gen") {
 						if item == nil {
 							item = &GenItem{}
@@ -188,7 +188,7 @@ func main() {
 
 			case *ast.StructType:
 				if item != nil {
-					item.StructType = v
+					item.StructType = typedNode
 					items = append(items, item)
 					item = nil
 				}
@@ -212,7 +212,7 @@ func main() {
 		traces[item.Ident.Name] = t
 	}
 	for i, item := range items {
-		t := packageObject.Traces[i]
+		trace := packageObject.Traces[i]
 		for _, field := range item.StructType.Fields.List {
 			if _, ok := field.Type.(*ast.FuncType); !ok {
 				continue
@@ -222,7 +222,7 @@ func main() {
 			if !ok {
 				continue
 			}
-			f, err := buildFunc(info, traces, fn)
+			buildedFunc, err := buildFunc(info, traces, fn)
 			if err != nil {
 				log.Printf(
 					"skipping hook %s due to error: %v",
@@ -231,9 +231,9 @@ func main() {
 
 				continue
 			}
-			t.Hooks = append(t.Hooks, Hook{
+			trace.Hooks = append(trace.Hooks, Hook{
 				Name: name,
-				Func: f,
+				Func: buildedFunc,
 			})
 		}
 	}
@@ -249,8 +249,8 @@ func main() {
 func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (ret *Func, err error) {
 	ret = new(Func)
 	for _, param := range fn.Params.List {
-		t := info.TypeOf(param.Type)
-		if t == nil {
+		paramType := info.TypeOf(param.Type)
+		if paramType == nil {
 			log.Fatalf("unknown type: %s", param.Type)
 		}
 		var names []string
@@ -268,7 +268,7 @@ func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (re
 		for _, name := range names {
 			ret.Params = append(ret.Params, Param{
 				Name: name,
-				Type: t,
+				Type: paramType,
 			})
 		}
 	}
@@ -281,9 +281,9 @@ func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (re
 		)
 	}
 
-	r := fn.Results.List[0]
+	res := fn.Results.List[0]
 
-	switch expr := r.Type.(type) {
+	switch expr := res.Type.(type) {
 	case *ast.FuncType:
 		result, err := buildFunc(info, traces, expr)
 		if err != nil {
@@ -304,7 +304,7 @@ func buildFunc(info *types.Info, traces map[string]*Trace, fn *ast.FuncType) (re
 
 	return nil, fmt.Errorf(
 		"unsupported function result type %s",
-		info.TypeOf(r.Type),
+		info.TypeOf(res.Type),
 	)
 }
 
@@ -363,13 +363,13 @@ type GenItem struct {
 	StructType *ast.StructType
 }
 
-func rsplit(s string, c byte) (s1, s2 string) {
-	i := strings.LastIndexByte(s, c)
+func rsplit(str string, c byte) (s1, s2 string) {
+	i := strings.LastIndexByte(str, c)
 	if i == -1 {
-		return s, ""
+		return str, ""
 	}
 
-	return s[:i], s[i+1:]
+	return str[:i], str[i+1:]
 }
 
 func scanBuildConstraints(r io.Reader) (cs []string, err error) {
