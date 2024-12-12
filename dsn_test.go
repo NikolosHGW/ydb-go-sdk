@@ -15,16 +15,16 @@ import (
 
 func TestParse(t *testing.T) {
 	newConnector := func(opts ...connector.Option) *connector.Connector {
-		c := &connector.Connector{}
+		connector := &connector.Connector{}
 		for _, opt := range opts {
 			if opt != nil {
-				if err := opt.Apply(c); err != nil {
+				if err := opt.Apply(connector); err != nil {
 					t.Error(err)
 				}
 			}
 		}
 
-		return c
+		return connector
 	}
 	newTableConn := func(opts ...tableSql.Option) *tableSql.Conn {
 		return tableSql.New(context.Background(), nil, nil, opts...)
@@ -178,10 +178,10 @@ func TestParse(t *testing.T) {
 				require.ErrorIs(t, err, tt.err)
 			} else {
 				require.NoError(t, err)
-				d, err := driverFromOptions(context.Background(), opts...)
+				optDriver, err := driverFromOptions(context.Background(), opts...)
 				require.NoError(t, err)
 				exp := newConnector(tt.connectorOpts...)
-				act := newConnector(d.databaseSQLOptions...)
+				act := newConnector(optDriver.databaseSQLOptions...)
 				t.Run("tableOptions", func(t *testing.T) {
 					require.Equal(t, newTableConn(exp.TableOpts...), newTableConn(act.TableOpts...))
 				})
@@ -194,7 +194,7 @@ func TestParse(t *testing.T) {
 				act.QueryOpts = nil
 				require.Equal(t, exp.Bindings(), act.Bindings())
 				require.Equal(t, exp, act)
-				compareConfigs(t, config.New(tt.opts...), d.config)
+				compareConfigs(t, config.New(tt.opts...), optDriver.config)
 			}
 		})
 	}

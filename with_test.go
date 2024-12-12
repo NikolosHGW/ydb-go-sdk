@@ -49,14 +49,14 @@ func TestWithCertificatesCached(t *testing.T) {
 		Bytes: caBytes,
 	})
 	require.NoError(t, err)
-	f, err := os.CreateTemp(os.TempDir(), "ca.pem")
+	tempFile, err := os.CreateTemp(os.TempDir(), "ca.pem")
 	require.NoError(t, err)
-	_, err = f.Write(caPEM.Bytes())
+	_, err = tempFile.Write(caPEM.Bytes())
 	require.NoError(t, err)
-	defer os.Remove(f.Name())
+	defer os.Remove(tempFile.Name())
 
 	var (
-		n           = 100
+		num         = 100
 		hitCounter  uint64
 		missCounter uint64
 		ctx         = context.TODO()
@@ -76,7 +76,7 @@ func TestWithCertificatesCached(t *testing.T) {
 		{
 			"file cache",
 			[]Option{
-				WithCertificatesFromFile(f.Name(),
+				WithCertificatesFromFile(tempFile.Name(),
 					certificates.FromFileOnHit(func() {
 						atomic.AddUint64(&hitCounter, 1)
 					}),
@@ -86,7 +86,7 @@ func TestWithCertificatesCached(t *testing.T) {
 				),
 			},
 			0,
-			uint64(n),
+			uint64(num),
 		},
 		{
 			"pem cache",
@@ -101,12 +101,12 @@ func TestWithCertificatesCached(t *testing.T) {
 				),
 			},
 			0,
-			uint64(n),
+			uint64(num),
 		},
 		{
 			"pem&file cache",
 			[]Option{
-				WithCertificatesFromFile(f.Name(),
+				WithCertificatesFromFile(tempFile.Name(),
 					certificates.FromFileOnHit(func() {
 						atomic.AddUint64(&hitCounter, 1)
 					}),
@@ -124,7 +124,7 @@ func TestWithCertificatesCached(t *testing.T) {
 				),
 			},
 			0,
-			uint64(n * 2),
+			uint64(num * 2),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestWithCertificatesCached(t *testing.T) {
 
 			hitCounter, missCounter = 0, 0
 
-			for i := 0; i < n; i++ {
+			for i := 0; i < num; i++ {
 				_, _, err := db.with(ctx,
 					func(ctx context.Context, c *Driver) error {
 						return nil // nothing to do

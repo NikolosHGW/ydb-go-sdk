@@ -638,14 +638,14 @@ func WithSharedBalancer(parent *Driver) Option {
 
 // WithTraceTable appends trace.Table into table traces
 func WithTraceTable(t trace.Table, opts ...trace.TableComposeOption) Option { //nolint:gocritic
-	return func(ctx context.Context, d *Driver) error {
-		d.tableOptions = append(
-			d.tableOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.tableOptions = append(
+			drv.tableOptions,
 			tableConfig.WithTrace(
 				&t,
 				append(
 					[]trace.TableComposeOption{
-						trace.WithTablePanicCallback(d.panicCallback),
+						trace.WithTablePanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
@@ -733,13 +733,13 @@ func WithTraceCoordination(t trace.Coordination, opts ...trace.CoordinationCompo
 
 // WithTraceRatelimiter returns ratelimiter trace option
 func WithTraceRatelimiter(t trace.Ratelimiter, opts ...trace.RatelimiterComposeOption) Option {
-	return func(ctx context.Context, d *Driver) error {
-		d.ratelimiterOptions = append(d.ratelimiterOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.ratelimiterOptions = append(drv.ratelimiterOptions,
 			ratelimiterConfig.WithTrace(
 				t,
 				append(
 					[]trace.RatelimiterComposeOption{
-						trace.WithRatelimiterPanicCallback(d.panicCallback),
+						trace.WithRatelimiterPanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,
@@ -799,13 +799,13 @@ func WithTraceTopic(t trace.Topic, opts ...trace.TopicComposeOption) Option { //
 
 // WithTraceDatabaseSQL adds configured discovery tracer to Driver
 func WithTraceDatabaseSQL(t trace.DatabaseSQL, opts ...trace.DatabaseSQLComposeOption) Option { //nolint:gocritic
-	return func(ctx context.Context, d *Driver) error {
-		d.databaseSQLOptions = append(d.databaseSQLOptions,
+	return func(ctx context.Context, drv *Driver) error {
+		drv.databaseSQLOptions = append(drv.databaseSQLOptions,
 			connector.WithTrace(
 				&t,
 				append(
 					[]trace.DatabaseSQLComposeOption{
-						trace.WithDatabaseSQLPanicCallback(d.panicCallback),
+						trace.WithDatabaseSQLPanicCallback(drv.panicCallback),
 					},
 					opts...,
 				)...,

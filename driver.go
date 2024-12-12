@@ -283,29 +283,29 @@ func Open(ctx context.Context, dsn string, opts ...Option) (_ *Driver, _ error) 
 		}
 	}
 
-	d, err := driverFromOptions(ctx, opts...)
+	optDriver, err := driverFromOptions(ctx, opts...)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
 	onDone := trace.DriverOnInit(
-		d.config.Trace(), &ctx,
+		optDriver.config.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/ydb.Open"),
-		d.config.Endpoint(), d.config.Database(), d.config.Secure(),
+		optDriver.config.Endpoint(), optDriver.config.Database(), optDriver.config.Secure(),
 	)
 	defer func() {
 		onDone(err)
 	}()
 
-	if err = d.connect(ctx); err != nil {
-		if d.pool != nil {
-			_ = d.pool.Release(ctx)
+	if err = optDriver.connect(ctx); err != nil {
+		if optDriver.pool != nil {
+			_ = optDriver.pool.Release(ctx)
 		}
 
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	return d, nil
+	return optDriver, nil
 }
 
 func MustOpen(ctx context.Context, dsn string, opts ...Option) *Driver {
@@ -325,25 +325,25 @@ func MustOpen(ctx context.Context, dsn string, opts ...Option) *Driver {
 // Will be removed after Oct 2024.
 // Read about versioning policy: https://github.com/ydb-platform/ydb-go-sdk/blob/master/VERSIONING.md#deprecated
 func New(ctx context.Context, opts ...Option) (_ *Driver, err error) { //nolint:nonamedreturns
-	d, err := driverFromOptions(ctx, opts...)
+	otpDriver, err := driverFromOptions(ctx, opts...)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
 	onDone := trace.DriverOnInit(
-		d.config.Trace(), &ctx,
+		otpDriver.config.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/ydb.New"),
-		d.config.Endpoint(), d.config.Database(), d.config.Secure(),
+		otpDriver.config.Endpoint(), otpDriver.config.Database(), otpDriver.config.Secure(),
 	)
 	defer func() {
 		onDone(err)
 	}()
 
-	if err = d.connect(ctx); err != nil {
+	if err = otpDriver.connect(ctx); err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	return d, nil
+	return otpDriver, nil
 }
 
 //nolint:cyclop, nonamedreturns, funlen
@@ -355,20 +355,20 @@ func driverFromOptions(ctx context.Context, opts ...Option) (_ *Driver, err erro
 		}
 	}()
 
-	d := &Driver{
+	currentDriver := &Driver{
 		children:     make(map[uint64]*Driver),
 		ctxCancel:    driverCtxCancel,
 		metaBalancer: &balancerWithMeta{},
 	}
 
 	if caFile, has := os.LookupEnv("YDB_SSL_ROOT_CERTIFICATES_FILE"); has {
-		d.opts = append(d.opts,
+		currentDriver.opts = append(currentDriver.opts,
 			WithCertificatesFromFile(caFile),
 		)
 	}
 	if logLevel, has := os.LookupEnv("YDB_LOG_SEVERITY_LEVEL"); has {
 		if l := log.FromString(logLevel); l < log.QUIET {
-			d.opts = append(d.opts,
+			currentDriver.opts = append(currentDriver.opts,
 				WithLogger(
 					log.Default(os.Stderr,
 						log.WithMinLevel(log.FromString(logLevel)),
@@ -383,40 +383,40 @@ func driverFromOptions(ctx context.Context, opts ...Option) (_ *Driver, err erro
 			)
 		}
 	}
-	d.opts = append(d.opts, opts...)
-	for _, opt := range d.opts {
+	currentDriver.opts = append(currentDriver.opts, opts...)
+	for _, opt := range currentDriver.opts {
 		if opt != nil {
-			err = opt(ctx, d)
+			err = opt(ctx, currentDriver)
 			if err != nil {
 				return nil, xerrors.WithStackTrace(err)
 			}
 		}
 	}
-	if d.logger != nil {
+	if currentDriver.logger != nil {
 		for _, opt := range []Option{
-			WithTraceDriver(log.Driver(d.logger, d.loggerDetails, d.loggerOpts...)),       //nolint:contextcheck
-			WithTraceTable(log.Table(d.logger, d.loggerDetails, d.loggerOpts...)),         //nolint:contextcheck
-			WithTraceQuery(log.Query(d.logger, d.loggerDetails, d.loggerOpts...)),         //nolint:contextcheck
-			WithTraceScripting(log.Scripting(d.logger, d.loggerDetails, d.loggerOpts...)), //nolint:contextcheck
-			WithTraceScheme(log.Scheme(d.logger, d.loggerDetails, d.loggerOpts...)),
-			WithTraceCoordination(log.Coordination(d.logger, d.loggerDetails, d.loggerOpts...)),
-			WithTraceRatelimiter(log.Ratelimiter(d.logger, d.loggerDetails, d.loggerOpts...)),
-			WithTraceDiscovery(log.Discovery(d.logger, d.loggerDetails, d.loggerOpts...)),     //nolint:contextcheck
-			WithTraceTopic(log.Topic(d.logger, d.loggerDetails, d.loggerOpts...)),             //nolint:contextcheck
-			WithTraceDatabaseSQL(log.DatabaseSQL(d.logger, d.loggerDetails, d.loggerOpts...)), //nolint:contextcheck
-			WithTraceRetry(log.Retry(d.logger, d.loggerDetails, d.loggerOpts...)),             //nolint:contextcheck
+			WithTraceDriver(log.Driver(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),       //nolint:contextcheck
+			WithTraceTable(log.Table(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),         //nolint:contextcheck
+			WithTraceQuery(log.Query(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),         //nolint:contextcheck
+			WithTraceScripting(log.Scripting(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)), //nolint:contextcheck
+			WithTraceScheme(log.Scheme(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),
+			WithTraceCoordination(log.Coordination(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),
+			WithTraceRatelimiter(log.Ratelimiter(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),
+			WithTraceDiscovery(log.Discovery(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),     //nolint:contextcheck
+			WithTraceTopic(log.Topic(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),             //nolint:contextcheck
+			WithTraceDatabaseSQL(log.DatabaseSQL(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)), //nolint:contextcheck
+			WithTraceRetry(log.Retry(currentDriver.logger, currentDriver.loggerDetails, currentDriver.loggerOpts...)),             //nolint:contextcheck
 		} {
 			if opt != nil {
-				err = opt(ctx, d)
+				err = opt(ctx, currentDriver)
 				if err != nil {
 					return nil, xerrors.WithStackTrace(err)
 				}
 			}
 		}
 	}
-	d.config = config.New(d.options...)
+	currentDriver.config = config.New(currentDriver.options...)
 
-	return d, nil
+	return currentDriver, nil
 }
 
 //nolint:cyclop, nonamedreturns, funlen

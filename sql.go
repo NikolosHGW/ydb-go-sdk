@@ -16,11 +16,11 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/trace"
 )
 
-var d = &sqlDriver{} //nolint:gochecknoglobals
+var globalSQLDriver = &sqlDriver{} //nolint:gochecknoglobals
 
 func init() { //nolint:gochecknoinits
-	sql.Register("ydb", d)
-	sql.Register("ydb/v3", d)
+	sql.Register("ydb", globalSQLDriver)
+	sql.Register("ydb/v3", globalSQLDriver)
 }
 
 func withConnectorOptions(opts ...ConnectorOption) Option {
@@ -157,13 +157,13 @@ type SQLConnector interface {
 }
 
 func Connector(parent *Driver, opts ...ConnectorOption) (SQLConnector, error) {
-	c, err := connector.Open(parent, parent.metaBalancer,
+	connector, err := connector.Open(parent, parent.metaBalancer,
 		append(
 			append(
 				parent.databaseSQLOptions,
 				opts...,
 			),
-			connector.WithOnClose(d.detach),
+			connector.WithOnClose(globalSQLDriver.detach),
 			connector.WithTraceRetry(parent.config.TraceRetry()),
 			connector.WithRetryBudget(parent.config.RetryBudget()),
 		)...,
@@ -171,9 +171,9 @@ func Connector(parent *Driver, opts ...ConnectorOption) (SQLConnector, error) {
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
-	d.attach(c, parent)
+	globalSQLDriver.attach(connector, parent)
 
-	return c, nil
+	return connector, nil
 }
 
 func MustConnector(parent *Driver, opts ...ConnectorOption) SQLConnector {
