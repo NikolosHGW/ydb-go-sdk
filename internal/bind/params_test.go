@@ -862,16 +862,16 @@ func TestAsUUIDCastToInterface(t *testing.T) {
 	})
 }
 
-func asUUIDCastToInterface(v interface{}) (value.Value, bool) {
+func asUUIDCastToInterface(val interface{}) (value.Value, bool) {
 	// explicit casting of type [16]byte to uuid.UUID will success,
 	// but casting of [16]byte to some interface with  methods from uuid.UUID will failed
-	if _, ok := v.(interface {
+	if _, ok := val.(interface {
 		URN() string
 	}); !ok {
 		return nil, false
 	}
 
-	switch vv := v.(type) {
+	switch vv := val.(type) {
 	case uuid.UUID:
 		return value.Uuid(vv), true
 	case *uuid.UUID:
@@ -912,16 +912,16 @@ var (
 	expUUIDValue = value.Uuid(uuid.UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 )
 
-func asUUIDUsingReflect(v interface{}) (value.Value, bool) {
-	switch reflect.TypeOf(v) {
+func asUUIDUsingReflect(val interface{}) (value.Value, bool) {
+	switch reflect.TypeOf(val) {
 	case uuidType:
-		return value.Uuid(v.(uuid.UUID)), true
+		return value.Uuid(val.(uuid.UUID)), true
 	case uuidPtrType:
-		if v == nil {
+		if val == nil {
 			return value.NullValue(types.UUID), false
 		}
 
-		return value.OptionalValue(value.Uuid(*(v.(*uuid.UUID)))), true
+		return value.OptionalValue(value.Uuid(*(val.(*uuid.UUID)))), true
 	}
 
 	return nil, false

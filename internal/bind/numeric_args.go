@@ -72,10 +72,10 @@ func (m NumericArgs) RewriteQuery(sql string, args ...interface{}) (yql string, 
 	return yql, newArgs, nil
 }
 
-func numericArgsStateFn(l *sqlLexer) stateFn {
+func numericArgsStateFn(lexer *sqlLexer) stateFn {
 	for {
-		r, width := utf8.DecodeRuneInString(l.src[l.pos:])
-		l.pos += width
+		r, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
+		lexer.pos += width
 
 		switch r {
 		case '`':
@@ -85,33 +85,33 @@ func numericArgsStateFn(l *sqlLexer) stateFn {
 		case '"':
 			return doubleQuoteState
 		case '$':
-			nextRune, _ := utf8.DecodeRuneInString(l.src[l.pos:])
+			nextRune, _ := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
 			if isNumber(nextRune) {
-				if l.pos-l.start > 0 {
-					l.parts = append(l.parts, l.src[l.start:l.pos-width])
+				if lexer.pos-lexer.start > 0 {
+					lexer.parts = append(lexer.parts, lexer.src[lexer.start:lexer.pos-width])
 				}
-				l.start = l.pos
+				lexer.start = lexer.pos
 
 				return numericArgState
 			}
 		case '-':
-			nextRune, width := utf8.DecodeRuneInString(l.src[l.pos:])
+			nextRune, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
 			if nextRune == '-' {
-				l.pos += width
+				lexer.pos += width
 
 				return oneLineCommentState
 			}
 		case '/':
-			nextRune, width := utf8.DecodeRuneInString(l.src[l.pos:])
+			nextRune, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
 			if nextRune == '*' {
-				l.pos += width
+				lexer.pos += width
 
 				return multilineCommentState
 			}
 		case utf8.RuneError:
-			if l.pos-l.start > 0 {
-				l.parts = append(l.parts, l.src[l.start:l.pos])
-				l.start = l.pos
+			if lexer.pos-lexer.start > 0 {
+				lexer.parts = append(lexer.parts, lexer.src[lexer.start:lexer.pos])
+				lexer.start = lexer.pos
 			}
 
 			return nil
@@ -133,7 +133,7 @@ func parsePositionalParameters(args []interface{}) ([]*params.Parameter, error) 
 	return newArgs, nil
 }
 
-func numericArgState(l *sqlLexer) stateFn {
+func numericArgState(lexer *sqlLexer) stateFn {
 	numbers := ""
 	defer func() {
 		if len(numbers) > 0 {
@@ -141,16 +141,16 @@ func numericArgState(l *sqlLexer) stateFn {
 			if err != nil {
 				panic(err)
 			}
-			l.parts = append(l.parts, numericArg(i))
-			l.start = l.pos
+			lexer.parts = append(lexer.parts, numericArg(i))
+			lexer.start = lexer.pos
 		} else {
-			l.parts = append(l.parts, l.src[l.start-1:l.pos])
-			l.start = l.pos
+			lexer.parts = append(lexer.parts, lexer.src[lexer.start-1:lexer.pos])
+			lexer.start = lexer.pos
 		}
 	}()
 	for {
-		rn, width := utf8.DecodeRuneInString(l.src[l.pos:])
-		l.pos += width
+		rn, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
+		lexer.pos += width
 
 		switch {
 		case isNumber(rn):
@@ -158,11 +158,11 @@ func numericArgState(l *sqlLexer) stateFn {
 		case isLetter(rn):
 			numbers = ""
 
-			return l.rawStateFn
+			return lexer.rawStateFn
 		default:
-			l.pos -= width
+			lexer.pos -= width
 
-			return l.rawStateFn
+			return lexer.rawStateFn
 		}
 	}
 }

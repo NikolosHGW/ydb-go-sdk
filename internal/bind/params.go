@@ -29,17 +29,17 @@ var (
 	uuidPtrType = reflect.TypeOf((*uuid.UUID)(nil))
 )
 
-func asUUID(v interface{}) (value.Value, bool) {
-	switch reflect.TypeOf(v) {
+func asUUID(val interface{}) (value.Value, bool) {
+	switch reflect.TypeOf(val) {
 	case uuidType:
-		return value.Uuid(v.(uuid.UUID)), true //nolint:forcetypeassert
+		return value.Uuid(val.(uuid.UUID)), true //nolint:forcetypeassert
 	case uuidPtrType:
-		vv := v.(*uuid.UUID) //nolint:forcetypeassert
+		vv := val.(*uuid.UUID) //nolint:forcetypeassert
 		if vv == nil {
 			return value.NullValue(types.UUID), true
 		}
 
-		return value.OptionalValue(value.Uuid(*(v.(*uuid.UUID)))), true //nolint:forcetypeassert
+		return value.OptionalValue(value.Uuid(*(val.(*uuid.UUID)))), true //nolint:forcetypeassert
 	}
 
 	return nil, false
@@ -156,25 +156,25 @@ func toType(v interface{}) (_ types.Type, err error) { //nolint:funlen
 }
 
 //nolint:gocyclo,funlen
-func toValue(v interface{}) (_ value.Value, err error) {
-	if x, ok := asUUID(v); ok {
+func toValue(val interface{}) (_ value.Value, err error) {
+	if x, ok := asUUID(val); ok {
 		return x, nil
 	}
 
-	switch x := v.(type) {
+	switch x := val.(type) {
 	case nil:
 		return value.VoidValue(), nil
 	case value.Value:
 		return x, nil
 	}
 
-	if vv := reflect.ValueOf(v); vv.Kind() == reflect.Pointer {
+	if vv := reflect.ValueOf(val); vv.Kind() == reflect.Pointer {
 		if vv.IsNil() {
 			tt, err := toType(reflect.New(vv.Type().Elem()).Elem().Interface())
 			if err != nil {
 				return nil, xerrors.WithStackTrace(
 					fmt.Errorf("cannot parse type of %T: %w",
-						v, err,
+						val, err,
 					),
 				)
 			}
@@ -186,7 +186,7 @@ func toValue(v interface{}) (_ value.Value, err error) {
 		if err != nil {
 			return nil, xerrors.WithStackTrace(
 				fmt.Errorf("cannot parse value of %T: %w",
-					v, err,
+					val, err,
 				),
 			)
 		}
@@ -194,7 +194,7 @@ func toValue(v interface{}) (_ value.Value, err error) {
 		return value.OptionalValue(vv), nil
 	}
 
-	switch elemType := v.(type) {
+	switch elemType := val.(type) {
 	case nil:
 		return value.VoidValue(), nil
 	case value.Value:
@@ -347,7 +347,7 @@ func toYdbParam(name string, value interface{}) (*params.Parameter, error) {
 	if v, ok := value.(*params.Parameter); ok {
 		return v, nil
 	}
-	v, err := toValue(value)
+	val, err := toValue(value)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -358,7 +358,7 @@ func toYdbParam(name string, value interface{}) (*params.Parameter, error) {
 		name = "$" + name
 	}
 
-	return params.Named(name, v), nil
+	return params.Named(name, val), nil
 }
 
 func Params(args ...interface{}) ([]*params.Parameter, error) {

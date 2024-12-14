@@ -72,10 +72,10 @@ func (m PositionalArgs) RewriteQuery(sql string, args ...interface{}) (
 	return buffer.String(), newArgs, nil
 }
 
-func positionalArgsStateFn(l *sqlLexer) stateFn {
+func positionalArgsStateFn(lexer *sqlLexer) stateFn {
 	for {
-		r, width := utf8.DecodeRuneInString(l.src[l.pos:])
-		l.pos += width
+		r, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
+		lexer.pos += width
 
 		switch r {
 		case '`':
@@ -85,26 +85,26 @@ func positionalArgsStateFn(l *sqlLexer) stateFn {
 		case '"':
 			return doubleQuoteState
 		case '?':
-			l.parts = append(l.parts, l.src[l.start:l.pos-1], positionalArg{})
-			l.start = l.pos
+			lexer.parts = append(lexer.parts, lexer.src[lexer.start:lexer.pos-1], positionalArg{})
+			lexer.start = lexer.pos
 		case '-':
-			nextRune, width := utf8.DecodeRuneInString(l.src[l.pos:])
+			nextRune, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
 			if nextRune == '-' {
-				l.pos += width
+				lexer.pos += width
 
 				return oneLineCommentState
 			}
 		case '/':
-			nextRune, width := utf8.DecodeRuneInString(l.src[l.pos:])
+			nextRune, width := utf8.DecodeRuneInString(lexer.src[lexer.pos:])
 			if nextRune == '*' {
-				l.pos += width
+				lexer.pos += width
 
 				return multilineCommentState
 			}
 		case utf8.RuneError:
-			if l.pos-l.start > 0 {
-				l.parts = append(l.parts, l.src[l.start:l.pos])
-				l.start = l.pos
+			if lexer.pos-lexer.start > 0 {
+				lexer.parts = append(lexer.parts, lexer.src[lexer.start:lexer.pos])
+				lexer.start = lexer.pos
 			}
 
 			return nil

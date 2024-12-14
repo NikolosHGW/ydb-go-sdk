@@ -328,14 +328,14 @@ func (c *conn) Close(ctx context.Context) (err error) {
 var onTransportErrorStub = func(ctx context.Context, err error) {}
 
 func replyWrapper(reply any) (opID string, issues []trace.Issue) {
-	switch t := reply.(type) {
+	switch typedReply := reply.(type) {
 	case operation.Response:
-		opID = t.GetOperation().GetId()
-		for _, issue := range t.GetOperation().GetIssues() {
+		opID = typedReply.GetOperation().GetId()
+		for _, issue := range typedReply.GetOperation().GetIssues() {
 			issues = append(issues, issue)
 		}
 	case operation.Status:
-		for _, issue := range t.GetIssues() {
+		for _, issue := range typedReply.GetIssues() {
 			issues = append(issues, issue)
 		}
 	}
@@ -405,16 +405,16 @@ func invoke(
 		return opID, issues, nil
 	}
 
-	switch t := reply.(type) {
+	switch typedReply := reply.(type) {
 	case operation.Response:
 		switch {
-		case !t.GetOperation().GetReady():
+		case !typedReply.GetOperation().GetReady():
 			return opID, issues, xerrors.WithStackTrace(errOperationNotReady)
 
-		case t.GetOperation().GetStatus() != Ydb.StatusIds_SUCCESS:
+		case typedReply.GetOperation().GetStatus() != Ydb.StatusIds_SUCCESS:
 			return opID, issues, xerrors.WithStackTrace(
 				xerrors.Operation(
-					xerrors.FromOperation(t.GetOperation()),
+					xerrors.FromOperation(typedReply.GetOperation()),
 					xerrors.WithAddress(address),
 					xerrors.WithNodeID(nodeID),
 					xerrors.WithTraceID(traceID),
@@ -422,10 +422,10 @@ func invoke(
 			)
 		}
 	case operation.Status:
-		if t.GetStatus() != Ydb.StatusIds_SUCCESS {
+		if typedReply.GetStatus() != Ydb.StatusIds_SUCCESS {
 			return opID, issues, xerrors.WithStackTrace(
 				xerrors.Operation(
-					xerrors.FromOperation(t),
+					xerrors.FromOperation(typedReply),
 					xerrors.WithAddress(address),
 					xerrors.WithNodeID(nodeID),
 					xerrors.WithTraceID(traceID),
@@ -525,7 +525,7 @@ func (c *conn) NewStream(
 		}
 	}()
 
-	s := &grpcClientStream{
+	clientStream := &grpcClientStream{
 		parentConn:   c,
 		streamCtx:    ctx,
 		streamCancel: cancel,
@@ -534,7 +534,7 @@ func (c *conn) NewStream(
 		sentMark:     sentMark,
 	}
 
-	s.stream, err = cc.NewStream(ctx, desc, method, append(opts, grpc.OnFinish(s.finish))...)
+	clientStream.stream, err = cc.NewStream(ctx, desc, method, append(opts, grpc.OnFinish(clientStream.finish))...)
 	if err != nil {
 		if xerrors.IsContextError(err) {
 			return nil, xerrors.WithStackTrace(err)
@@ -563,7 +563,7 @@ func (c *conn) NewStream(
 		))
 	}
 
-	return s, nil
+	return clientStream, nil
 }
 
 type option func(c *conn)
@@ -585,7 +585,7 @@ func withOnTransportError(onTransportError func(ctx context.Context, cc Conn, ca
 }
 
 func newConn(e endpoint.Endpoint, config connConfig, opts ...option) *conn {
-	c := &conn{
+	connection := &conn{
 		endpoint:     e,
 		config:       config,
 		done:         make(chan struct{}),
@@ -597,14 +597,14 @@ func newConn(e endpoint.Endpoint, config connConfig, opts ...option) *conn {
 			},
 		},
 	}
-	c.state.Store(uint32(Created))
+	connection.state.Store(uint32(Created))
 	for _, opt := range opts {
 		if opt != nil {
-			opt(c)
+			opt(connection)
 		}
 	}
 
-	return c
+	return connection
 }
 
 var _ stats.Handler = statsHandler{}

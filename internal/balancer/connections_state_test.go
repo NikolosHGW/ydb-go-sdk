@@ -184,7 +184,10 @@ func TestSelectRandomConnection(t *testing.T) {
 		require.Nil(t, randomConn)
 		require.Equal(t, 1, failedCount)
 
-		randomConn, failedCount = connState.selectRandomConnection([]conn.Conn{&mock.Conn{AddrField: "asd", State: conn.Banned}}, true)
+		randomConn, failedCount = connState.selectRandomConnection(
+			[]conn.Conn{&mock.Conn{AddrField: "asd", State: conn.Banned}},
+			true,
+		)
 		require.Equal(t, &mock.Conn{AddrField: "asd", State: conn.Banned}, randomConn)
 		require.Equal(t, 0, failedCount)
 	})

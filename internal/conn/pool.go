@@ -101,9 +101,9 @@ func (p *Pool) Ban(ctx context.Context, cc Conn, cause error) {
 		return
 	}
 
-	e := cc.Endpoint().Copy()
+	connEndpoint := cc.Endpoint().Copy()
 
-	cc, ok := p.conns.Get(e.Address())
+	cc, ok := p.conns.Get(connEndpoint.Address())
 	if !ok {
 		return
 	}
@@ -111,7 +111,7 @@ func (p *Pool) Ban(ctx context.Context, cc Conn, cause error) {
 	trace.DriverOnConnBan(
 		p.config.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/conn.(*Pool).Ban"),
-		e, cc.GetState(), cause,
+		connEndpoint, cc.GetState(), cause,
 	)(cc.SetState(ctx, Banned))
 }
 
@@ -120,9 +120,9 @@ func (p *Pool) Allow(ctx context.Context, cc Conn) {
 		return
 	}
 
-	e := cc.Endpoint().Copy()
+	connEndpoint := cc.Endpoint().Copy()
 
-	cc, ok := p.conns.Get(e.Address())
+	cc, ok := p.conns.Get(connEndpoint.Address())
 	if !ok {
 		return
 	}
@@ -130,7 +130,7 @@ func (p *Pool) Allow(ctx context.Context, cc Conn) {
 	trace.DriverOnConnAllow(
 		p.config.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/conn.(*Pool).Allow"),
-		e, cc.GetState(),
+		connEndpoint, cc.GetState(),
 	)(cc.Unban(ctx))
 }
 
@@ -215,14 +215,14 @@ func NewPool(ctx context.Context, config Config) *Pool {
 	)
 	defer onDone()
 
-	p := &Pool{
+	pool := &Pool{
 		usages:      1,
 		config:      config,
 		dialOptions: config.GrpcDialOptions(),
 		done:        make(chan struct{}),
 	}
 
-	p.dialOptions = append(p.dialOptions,
+	pool.dialOptions = append(pool.dialOptions,
 		grpc.WithResolvers(
 			xresolver.New("", config.Trace().Compose(&trace.Driver{
 				OnResolve: func(info trace.DriverResolveStartInfo) func(trace.DriverResolveDoneInfo) {
@@ -231,10 +231,10 @@ func NewPool(ctx context.Context, config Config) *Pool {
 
 					return func(info trace.DriverResolveDoneInfo) {
 						if info.Error != nil || len(resolved) == 0 {
-							p.conns.Range(func(address string, cc *conn) bool {
+							pool.conns.Range(func(address string, cc *conn) bool {
 								if u, err := url.Parse(address); err == nil && u.Host == target && cc.grpcConn != nil {
 									_ = cc.grpcConn.Close()
-									_ = p.conns.Delete(address)
+									_ = pool.conns.Delete(address)
 								}
 
 								return true
@@ -247,8 +247,8 @@ func NewPool(ctx context.Context, config Config) *Pool {
 	)
 
 	if ttl := config.ConnectionTTL(); ttl > 0 {
-		go p.connParker(xcontext.ValueOnly(ctx), ttl, ttl/2) //nolint:gomnd
+		go pool.connParker(xcontext.ValueOnly(ctx), ttl, ttl/2) //nolint:gomnd
 	}
 
-	return p
+	return pool
 }
