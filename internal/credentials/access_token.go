@@ -27,17 +27,17 @@ type AccessToken struct {
 }
 
 func NewAccessTokenCredentials(token string, opts ...AccessTokenCredentialsOption) *AccessToken {
-	c := &AccessToken{
+	accessToken := &AccessToken{
 		token:      token,
 		sourceInfo: stack.Record(1),
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt.ApplyAccessTokenCredentialsOption(c)
+			opt.ApplyAccessTokenCredentialsOption(accessToken)
 		}
 	}
 
-	return c
+	return accessToken
 }
 
 // Token implements Credentials.

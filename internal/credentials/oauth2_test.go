@@ -188,7 +188,7 @@ func TestOauth2TokenExchange(t *testing.T) {
 
 	for _, params := range testsParams {
 		t.Run("", func(t *testing.T) {
-			xtest.TestManyTimes(t, func(t testing.TB) {
+			xtest.TestManyTimes(t, func(tb testing.TB) {
 				var currentTestParams Oauth2TokenExchangeTestParams
 				server := runTokenExchangeServer(&currentTestParams, true, nil)
 				defer server.Close()
@@ -202,22 +202,22 @@ func TestOauth2TokenExchange(t *testing.T) {
 					WithSubjectToken(NewFixedTokenSource("test_source_token", "urn:ietf:params:oauth:token-type:test_jwt")),
 					WithSyncExchangeTimeout(time.Second*3),
 				)
-				require.NoError(t, err)
+				require.NoError(tb, err)
 
 				token, err := client.Token(ctx)
 				if params.ExpectedErrorPart == "" && params.ExpectedError == nil { //nolint:nestif
-					require.NoError(t, err)
+					require.NoError(tb, err)
 				} else {
 					if !errors.Is(err, context.DeadlineExceeded) {
 						if params.ExpectedErrorPart != "" {
-							require.ErrorContains(t, err, params.ExpectedErrorPart)
+							require.ErrorContains(tb, err, params.ExpectedErrorPart)
 						}
 						if params.ExpectedError != nil {
-							require.ErrorIs(t, err, params.ExpectedError)
+							require.ErrorIs(tb, err, params.ExpectedError)
 						}
 					}
 				}
-				require.Equal(t, params.ExpectedToken, token)
+				require.Equal(tb, params.ExpectedToken, token)
 			}, xtest.StopAfter(5+time.Second))
 		})
 	}
@@ -227,7 +227,7 @@ func TestOauth2TokenUpdate(t *testing.T) {
 	ctx, cancel := context.WithCancel(xtest.Context(t))
 	defer cancel()
 
-	xtest.TestManyTimes(t, func(t testing.TB) {
+	xtest.TestManyTimes(t, func(tb testing.TB) {
 		var currentTestParams Oauth2TokenExchangeTestParams
 		server := runTokenExchangeServer(&currentTestParams, true, nil)
 		defer server.Close()
@@ -244,12 +244,12 @@ func TestOauth2TokenUpdate(t *testing.T) {
 			WithScope("test_scope1", "test_scope2"),
 			WithFixedSubjectToken("test_source_token", "urn:ietf:params:oauth:token-type:test_jwt"),
 		)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 
 		token, err := client.Token(ctx)
 		t1 := time.Now()
-		require.NoError(t, err)
-		require.Equal(t, "Bearer test_token_1", token)
+		require.NoError(tb, err)
+		require.Equal(tb, "Bearer test_token_1", token)
 
 		// Second exchange
 		currentTestParams = Oauth2TokenExchangeTestParams{
@@ -259,23 +259,23 @@ func TestOauth2TokenUpdate(t *testing.T) {
 
 		token, err = client.Token(ctx)
 		t2 := time.Now()
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		if t2.Sub(t1) <= time.Second { // half expire period => no attempts to update
-			require.Equal(t, "Bearer test_token_1", token)
+			require.Equal(tb, "Bearer test_token_1", token)
 		}
 
 		time.Sleep(time.Second) // wait half expire period
 		for i := 1; i <= 100; i++ {
 			t3 := time.Now()
 			token, err = client.Token(ctx)
-			require.NoError(t, err)
+			require.NoError(tb, err)
 			if t3.Sub(t1) >= 2*time.Second {
-				require.Equal(t, "Bearer test_token_2", token) // Must update at least sync
+				require.Equal(tb, "Bearer test_token_2", token) // Must update at least sync
 			}
 			if token == "Bearer test_token_2" { // already updated
 				break
 			}
-			require.Equal(t, "Bearer test_token_1", token)
+			require.Equal(tb, "Bearer test_token_1", token)
 
 			time.Sleep(10 * time.Millisecond)
 		}
@@ -288,8 +288,8 @@ func TestOauth2TokenUpdate(t *testing.T) {
 
 		for i := 1; i <= 5; i++ {
 			token, err = client.Token(ctx)
-			require.NoError(t, err)
-			require.Equal(t, "Bearer test_token_2", token)
+			require.NoError(tb, err)
+			require.Equal(tb, "Bearer test_token_2", token)
 		}
 	}, xtest.StopAfter(14*time.Second))
 }
@@ -453,7 +453,7 @@ func TestErrorInSourceToken(t *testing.T) {
 }
 
 func TestErrorInHTTPRequest(t *testing.T) {
-	xtest.TestManyTimes(t, func(t testing.TB) {
+	xtest.TestManyTimes(t, func(tb testing.TB) {
 		client, err := NewOauth2TokenExchangeCredentials(
 			WithTokenEndpoint("http://invalid_host:42/exchange"),
 			WithJWTSubjectToken(
@@ -473,17 +473,17 @@ func TestErrorInHTTPRequest(t *testing.T) {
 			WithSourceInfo("TestErrorInHTTPRequest"),
 			WithSyncExchangeTimeout(time.Second*3),
 		)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 
 		token, err := client.Token(context.Background())
 		if !errors.Is(err, context.DeadlineExceeded) {
-			require.ErrorIs(t, err, errCouldNotExchangeToken)
+			require.ErrorIs(tb, err, errCouldNotExchangeToken)
 		}
-		require.Equal(t, "", token)
+		require.Equal(tb, "", token)
 
 		// check format:
 		formatted := fmt.Sprint(client)
-		require.Equal(t, `OAuth2TokenExchange{Endpoint:"http://invalid_host:42/exchange",GrantType:urn:ietf:params:oauth:grant-type:token-exchange,Resource:[],Audience:[],Scope:[1 2 3],RequestedTokenType:urn:ietf:params:oauth:token-type:access_token,SubjectToken:JWTTokenSource{Method:RS256,KeyID:key_id,Issuer:"test_issuer",Subject:"",Audience:[test_audience],ID:,TokenTTL:1h0m0s},ActorToken:JWTTokenSource{Method:RS256,KeyID:key_id,Issuer:"test_issuer",Subject:"",Audience:[],ID:,TokenTTL:1h0m0s},From:"TestErrorInHTTPRequest"}`, formatted) //nolint:lll
+		require.Equal(tb, `OAuth2TokenExchange{Endpoint:"http://invalid_host:42/exchange",GrantType:urn:ietf:params:oauth:grant-type:token-exchange,Resource:[],Audience:[],Scope:[1 2 3],RequestedTokenType:urn:ietf:params:oauth:token-type:access_token,SubjectToken:JWTTokenSource{Method:RS256,KeyID:key_id,Issuer:"test_issuer",Subject:"",Audience:[test_audience],ID:,TokenTTL:1h0m0s},ActorToken:JWTTokenSource{Method:RS256,KeyID:key_id,Issuer:"test_issuer",Subject:"",Audience:[],ID:,TokenTTL:1h0m0s},From:"TestErrorInHTTPRequest"}`, formatted) //nolint:lll
 	}, xtest.StopAfter(15*time.Second))
 }
 
@@ -621,9 +621,9 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 
 	for _, method := range methods {
 		for _, binary := range binaryOpts {
-			f, err := os.CreateTemp("", "tmpfile-")
+			tempFile, err := os.CreateTemp("", "tmpfile-")
 			require.NoError(t, err)
-			defer os.Remove(f.Name())
+			defer os.Remove(tempFile.Name())
 
 			var publicKey interface{}
 			var src TokenSource
@@ -634,9 +634,9 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 				require.NoError(t, err)
 
 				if binary {
-					_, err = f.Write(publicKey.([]byte))
+					_, err = tempFile.Write(publicKey.([]byte))
 					require.NoError(t, err)
-					f.Close()
+					tempFile.Close()
 
 					_, err = NewJWTTokenSource(
 						WithHMACSecretKeyFile("~/unknown_file"),
@@ -648,7 +648,7 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 					require.ErrorIs(t, err, errCouldNotReadPrivateKeyFile)
 
 					src, err = NewJWTTokenSource(
-						WithHMACSecretKeyFile(f.Name()),
+						WithHMACSecretKeyFile(tempFile.Name()),
 						WithKeyID("key_id"),
 						WithSigningMethodName(method),
 						WithIssuer("test_issuer"),
@@ -656,9 +656,9 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 					)
 					require.NoError(t, err)
 				} else {
-					_, err = f.WriteString(testHMACSecretKeyBase64Content)
+					_, err = tempFile.WriteString(testHMACSecretKeyBase64Content)
 					require.NoError(t, err)
-					f.Close()
+					tempFile.Close()
 
 					_, err = NewJWTTokenSource(
 						WithHMACSecretKeyBase64File("~/unknown_file"),
@@ -670,7 +670,7 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 					require.ErrorIs(t, err, errCouldNotReadPrivateKeyFile)
 
 					src, err = NewJWTTokenSource(
-						WithHMACSecretKeyBase64File(f.Name()),
+						WithHMACSecretKeyBase64File(tempFile.Name()),
 						WithKeyID("key_id"),
 						WithSigningMethodName(method),
 						WithIssuer("test_issuer"),
@@ -686,9 +686,9 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 				publicKey, err = jwt.ParseECPublicKeyFromPEM([]byte(testECPublicKeyContent))
 				require.NoError(t, err)
 
-				_, err = f.WriteString(testECPrivateKeyContent)
+				_, err = tempFile.WriteString(testECPrivateKeyContent)
 				require.NoError(t, err)
-				f.Close()
+				tempFile.Close()
 
 				_, err = NewJWTTokenSource(
 					WithECPrivateKeyPEMFile("~/unknown_file"),
@@ -700,7 +700,7 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 				require.ErrorIs(t, err, errCouldNotReadPrivateKeyFile)
 
 				src, err = NewJWTTokenSource(
-					WithECPrivateKeyPEMFile(f.Name()),
+					WithECPrivateKeyPEMFile(tempFile.Name()),
 					WithKeyID("key_id"),
 					WithSigningMethodName(method),
 					WithIssuer("test_issuer"),
@@ -715,9 +715,9 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 				publicKey, err = jwt.ParseRSAPublicKeyFromPEM([]byte(testRSAPublicKeyContent))
 				require.NoError(t, err)
 
-				_, err = f.WriteString(testRSAPrivateKeyContent)
+				_, err = tempFile.WriteString(testRSAPrivateKeyContent)
 				require.NoError(t, err)
-				f.Close()
+				tempFile.Close()
 
 				_, err = NewJWTTokenSource(
 					WithRSAPrivateKeyPEMFile("~/unknown_file"),
@@ -729,7 +729,7 @@ func TestJWTTokenSourceReadPrivateKeyFromFile(t *testing.T) {
 				require.ErrorIs(t, err, errCouldNotReadPrivateKeyFile)
 
 				src, err = NewJWTTokenSource(
-					WithRSAPrivateKeyPEMFile(f.Name()),
+					WithRSAPrivateKeyPEMFile(tempFile.Name()),
 					WithKeyID("key_id"),
 					WithSigningMethodName(method),
 					WithIssuer("test_issuer"),
@@ -1018,13 +1018,13 @@ func TestParseSettingsFromFile(t *testing.T) {
 	for _, params := range testsParams {
 		var fileName string
 		if params.Cfg != "" {
-			f, err := os.CreateTemp("", "cfg-")
+			tempFile, err := os.CreateTemp("", "cfg-")
 			require.NoError(t, err)
-			defer os.Remove(f.Name())
-			_, err = f.WriteString(params.Cfg)
+			defer os.Remove(tempFile.Name())
+			_, err = tempFile.WriteString(params.Cfg)
 			require.NoError(t, err)
-			f.Close()
-			fileName = f.Name()
+			tempFile.Close()
+			fileName = tempFile.Name()
 		} else {
 			fileName = params.CfgFile
 		}

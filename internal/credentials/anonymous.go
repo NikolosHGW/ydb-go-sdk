@@ -24,16 +24,16 @@ type Anonymous struct {
 }
 
 func NewAnonymousCredentials(opts ...AnonymousCredentialsOption) *Anonymous {
-	c := &Anonymous{
+	credential := &Anonymous{
 		sourceInfo: stack.Record(1),
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt.ApplyAnonymousCredentialsOption(c)
+			opt.ApplyAnonymousCredentialsOption(credential)
 		}
 	}
 
-	return c
+	return credential
 }
 
 // Token implements Credentials.

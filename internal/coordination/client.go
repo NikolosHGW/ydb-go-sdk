@@ -323,23 +323,23 @@ func describeNode(
 	}, nil
 }
 
-func applyToSession(t *trace.Coordination, opts ...options.SessionOption) sessionOption {
-	c := defaultCreateSessionConfig()
+func applyToSession(coordinationTrace *trace.Coordination, opts ...options.SessionOption) sessionOption {
+	sessionConfig := defaultCreateSessionConfig()
 
 	for _, o := range opts {
 		if o != nil {
-			o(c)
+			o(sessionConfig)
 		}
 	}
 
-	return func(s *session) {
-		s.trace = t
-		s.description = c.Description
-		s.sessionTimeout = c.SessionTimeout
-		s.sessionStartTimeout = c.SessionStartTimeout
-		s.sessionStopTimeout = c.SessionStopTimeout
-		s.sessionKeepAliveTimeout = c.SessionKeepAliveTimeout
-		s.sessionReconnectDelay = c.SessionReconnectDelay
+	return func(currentSession *session) {
+		currentSession.trace = coordinationTrace
+		currentSession.description = sessionConfig.Description
+		currentSession.sessionTimeout = sessionConfig.SessionTimeout
+		currentSession.sessionStartTimeout = sessionConfig.SessionStartTimeout
+		currentSession.sessionStopTimeout = sessionConfig.SessionStopTimeout
+		currentSession.sessionKeepAliveTimeout = sessionConfig.SessionKeepAliveTimeout
+		currentSession.sessionReconnectDelay = sessionConfig.SessionReconnectDelay
 	}
 }
 
@@ -394,7 +394,7 @@ func (c *Client) Session(
 		onDone(finalErr)
 	}()
 
-	s, err := createSession(ctx, c.client, path,
+	newSession, err := createSession(ctx, c.client, path,
 		applyToSession(c.config.Trace(), opts...),
 		func(s *session) {
 			s.onCreate = append(s.onCreate, func(s *session) {
@@ -409,7 +409,7 @@ func (c *Client) Session(
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	return s, nil
+	return newSession, nil
 }
 
 func (c *Client) Close(ctx context.Context) (finalErr error) {

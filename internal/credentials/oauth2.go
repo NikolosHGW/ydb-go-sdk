@@ -344,7 +344,7 @@ type oauth2TokenExchange struct {
 func NewOauth2TokenExchangeCredentials(
 	opts ...Oauth2TokenExchangeCredentialsOption,
 ) (*oauth2TokenExchange, error) {
-	c := &oauth2TokenExchange{
+	credential := &oauth2TokenExchange{
 		grantType:           "urn:ietf:params:oauth:grant-type:token-exchange",
 		requestedTokenType:  "urn:ietf:params:oauth:token-type:access_token",
 		requestTimeout:      defaultRequestTimeout,
@@ -355,18 +355,18 @@ func NewOauth2TokenExchangeCredentials(
 	var err error
 	for _, opt := range opts {
 		if opt != nil {
-			err = opt.ApplyOauth2CredentialsOption(c)
+			err = opt.ApplyOauth2CredentialsOption(credential)
 			if err != nil {
 				return nil, xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotApplyOption, err))
 			}
 		}
 	}
 
-	if c.tokenEndpoint == "" {
+	if credential.tokenEndpoint == "" {
 		return nil, xerrors.WithStackTrace(errEmptyTokenEndpointError)
 	}
 
-	return c, nil
+	return credential, nil
 }
 
 type privateKeyLoadOptionFunc func(string) JWTTokenSourceOption
@@ -480,17 +480,17 @@ type prettyTTL struct {
 }
 
 func (d *prettyTTL) UnmarshalJSON(data []byte) error {
-	var s string
-	err := json.Unmarshal(data, &s)
+	var durationString string
+	err := json.Unmarshal(data, &durationString)
 	if err != nil {
 		return xerrors.WithStackTrace(err)
 	}
-	d.Value, err = time.ParseDuration(s)
+	d.Value, err = time.ParseDuration(durationString)
 	if err != nil {
 		return xerrors.WithStackTrace(err)
 	}
 	if d.Value <= 0 {
-		return xerrors.WithStackTrace(fmt.Errorf("%w, but got: %q", errTTLMustBePositive, s))
+		return xerrors.WithStackTrace(fmt.Errorf("%w, but got: %q", errTTLMustBePositive, durationString))
 	}
 
 	return xerrors.WithStackTrace(err)
@@ -1203,13 +1203,13 @@ type signingMethodNameOption struct {
 	method string
 }
 
-func (method *signingMethodNameOption) ApplyJWTTokenSourceOption(s *jwtTokenSource) error {
+func (method *signingMethodNameOption) ApplyJWTTokenSourceOption(tokenSource *jwtTokenSource) error {
 	signingMethodDesc, signingMethodFound := signingMethodsRegistry[strings.ToUpper(method.method)]
 	if !signingMethodFound {
 		return xerrors.WithStackTrace(signingMethodNotSupportedError(method.method))
 	}
 
-	s.signingMethod = signingMethodDesc.method
+	tokenSource.signingMethod = signingMethodDesc.method
 
 	return nil
 }
@@ -1309,7 +1309,7 @@ type ecPrivateKeyPemFileOption struct {
 	path string
 }
 
-func (key *ecPrivateKeyPemFileOption) ApplyJWTTokenSourceOption(s *jwtTokenSource) error {
+func (key *ecPrivateKeyPemFileOption) ApplyJWTTokenSourceOption(tokenSource *jwtTokenSource) error {
 	bytes, err := readFileContent(key.path)
 	if err != nil {
 		return xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotReadPrivateKeyFile, err))
@@ -1317,7 +1317,7 @@ func (key *ecPrivateKeyPemFileOption) ApplyJWTTokenSourceOption(s *jwtTokenSourc
 
 	o := ecPrivateKeyPemContentOption{bytes}
 
-	return o.ApplyJWTTokenSourceOption(s)
+	return o.ApplyJWTTokenSourceOption(tokenSource)
 }
 
 func WithECPrivateKeyPEMFile(path string) *ecPrivateKeyPemFileOption {
@@ -1363,13 +1363,13 @@ type hmacSecretKeyFileOption struct {
 	path string
 }
 
-func (key *hmacSecretKeyFileOption) ApplyJWTTokenSourceOption(s *jwtTokenSource) error {
+func (key *hmacSecretKeyFileOption) ApplyJWTTokenSourceOption(tokenSource *jwtTokenSource) error {
 	bytes, err := readFileContent(key.path)
 	if err != nil {
 		return xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotReadPrivateKeyFile, err))
 	}
 
-	s.privateKey = bytes
+	tokenSource.privateKey = bytes
 
 	return nil
 }
@@ -1383,7 +1383,7 @@ type hmacSecretKeyBase64FileOption struct {
 	path string
 }
 
-func (key *hmacSecretKeyBase64FileOption) ApplyJWTTokenSourceOption(s *jwtTokenSource) error {
+func (key *hmacSecretKeyBase64FileOption) ApplyJWTTokenSourceOption(tokenSource *jwtTokenSource) error {
 	bytes, err := readFileContent(key.path)
 	if err != nil {
 		return xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotReadPrivateKeyFile, err))
@@ -1391,7 +1391,7 @@ func (key *hmacSecretKeyBase64FileOption) ApplyJWTTokenSourceOption(s *jwtTokenS
 
 	o := hmacSecretKeyBase64ContentOption{string(bytes)}
 
-	return o.ApplyJWTTokenSourceOption(s)
+	return o.ApplyJWTTokenSourceOption(tokenSource)
 }
 
 func WithHMACSecretKeyBase64File(path string) *hmacSecretKeyBase64FileOption {
@@ -1399,29 +1399,29 @@ func WithHMACSecretKeyBase64File(path string) *hmacSecretKeyBase64FileOption {
 }
 
 func NewJWTTokenSource(opts ...JWTTokenSourceOption) (*jwtTokenSource, error) {
-	s := &jwtTokenSource{
+	tokenSource := &jwtTokenSource{
 		tokenTTL: defaultJWTTokenTTL,
 	}
 
 	var err error
 	for _, opt := range opts {
 		if opt != nil {
-			err = opt.ApplyJWTTokenSourceOption(s)
+			err = opt.ApplyJWTTokenSourceOption(tokenSource)
 			if err != nil {
 				return nil, xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotApplyJWTOption, err))
 			}
 		}
 	}
 
-	if s.signingMethod == nil {
+	if tokenSource.signingMethod == nil {
 		return nil, xerrors.WithStackTrace(errNoSigningMethodError)
 	}
 
-	if s.privateKey == nil {
+	if tokenSource.privateKey == nil {
 		return nil, xerrors.WithStackTrace(errNoPrivateKeyError)
 	}
 
-	return s, nil
+	return tokenSource, nil
 }
 
 type jwtTokenSource struct {
@@ -1444,7 +1444,7 @@ func (s *jwtTokenSource) Token() (Token, error) {
 		expire = jwt.NewNumericDate(now.Add(s.tokenTTL).UTC())
 		err    error
 	)
-	t := jwt.Token{
+	jwtToken := jwt.Token{
 		Header: map[string]interface{}{
 			"typ": "JWT",
 			"alg": s.signingMethod.Alg(),
@@ -1462,7 +1462,7 @@ func (s *jwtTokenSource) Token() (Token, error) {
 	}
 
 	var token Token
-	token.Token, err = t.SignedString(s.privateKey)
+	token.Token, err = jwtToken.SignedString(s.privateKey)
 	if err != nil {
 		return token, xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotSignJWTToken, err))
 	}

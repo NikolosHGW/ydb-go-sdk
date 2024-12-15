@@ -42,7 +42,7 @@ func WithGrpcDialOptions(opts ...grpc.DialOption) grpcDialOptionsOption {
 }
 
 func NewStaticCredentials(user, password, endpoint string, opts ...StaticCredentialsOption) *Static {
-	c := &Static{
+	static := &Static{
 		user:       user,
 		password:   password,
 		endpoint:   endpoint,
@@ -50,11 +50,11 @@ func NewStaticCredentials(user, password, endpoint string, opts ...StaticCredent
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt.ApplyStaticCredentialsOption(c)
+			opt.ApplyStaticCredentialsOption(static)
 		}
 	}
 
-	return c
+	return static
 }
 
 var (
