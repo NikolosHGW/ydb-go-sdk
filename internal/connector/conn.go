@@ -61,27 +61,27 @@ func (c *connWrapper) tableDescription(ctx context.Context, tableName string) (d
 }
 
 func (c *connWrapper) GetColumns(ctx context.Context, tableName string) (columns []string, _ error) {
-	d, err := c.tableDescription(ctx, c.normalizePath(tableName))
+	description, err := c.tableDescription(ctx, c.normalizePath(tableName))
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	for i := range d.Columns {
-		columns = append(columns, d.Columns[i].Name)
+	for i := range description.Columns {
+		columns = append(columns, description.Columns[i].Name)
 	}
 
 	return columns, nil
 }
 
 func (c *connWrapper) GetColumnType(ctx context.Context, tableName, columnName string) (dataType string, _ error) {
-	d, err := c.tableDescription(ctx, c.normalizePath(tableName))
+	description, err := c.tableDescription(ctx, c.normalizePath(tableName))
 	if err != nil {
 		return "", xerrors.WithStackTrace(err)
 	}
 
-	for i := range d.Columns {
-		if d.Columns[i].Name == columnName {
-			return d.Columns[i].Type.Yql(), nil
+	for i := range description.Columns {
+		if description.Columns[i].Name == columnName {
+			return description.Columns[i].Type.Yql(), nil
 		}
 	}
 
@@ -138,22 +138,22 @@ func (c *connWrapper) getTables(ctx context.Context, absPath string, recursive, 
 		return nil, nil
 	}
 
-	d, err := c.connector.Scheme().ListDirectory(ctx, absPath)
+	dir, err := c.connector.Scheme().ListDirectory(ctx, absPath)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	if !d.IsDirectory() && !d.IsDatabase() {
+	if !dir.IsDirectory() && !dir.IsDatabase() {
 		return nil, xerrors.WithStackTrace(fmt.Errorf("'%s' is not a folder", absPath))
 	}
 
-	for i := range d.Children {
-		switch d.Children[i].Type {
+	for i := range dir.Children {
+		switch dir.Children[i].Type {
 		case scheme.EntryTable, scheme.EntryColumnTable:
-			tables = append(tables, path.Join(absPath, d.Children[i].Name))
+			tables = append(tables, path.Join(absPath, dir.Children[i].Name))
 		case scheme.EntryDirectory, scheme.EntryDatabase:
 			if recursive {
-				childTables, err := c.getTables(ctx, path.Join(absPath, d.Children[i].Name), recursive, excludeSysDirs)
+				childTables, err := c.getTables(ctx, path.Join(absPath, dir.Children[i].Name), recursive, excludeSysDirs)
 				if err != nil {
 					return nil, xerrors.WithStackTrace(err)
 				}
@@ -170,14 +170,14 @@ func (c *connWrapper) GetTables(ctx context.Context, folder string, recursive, e
 ) {
 	absPath := c.normalizePath(folder)
 
-	e, err := c.connector.Scheme().DescribePath(ctx, absPath)
+	entry, err := c.connector.Scheme().DescribePath(ctx, absPath)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	switch e.Type {
+	switch entry.Type {
 	case scheme.EntryTable, scheme.EntryColumnTable:
-		return []string{e.Name}, err
+		return []string{entry.Name}, err
 	case scheme.EntryDirectory, scheme.EntryDatabase:
 		tables, err = c.getTables(ctx, absPath, recursive, excludeSysDirs)
 		if err != nil {
@@ -189,7 +189,7 @@ func (c *connWrapper) GetTables(ctx context.Context, folder string, recursive, e
 		}), nil
 	default:
 		return nil, xerrors.WithStackTrace(
-			fmt.Errorf("'%s' is not a table or directory (%s)", folder, e.Type.String()),
+			fmt.Errorf("'%s' is not a table or directory (%s)", folder, entry.Type.String()),
 		)
 	}
 }
@@ -206,14 +206,14 @@ func (c *connWrapper) GetIndexes(ctx context.Context, tableName string) (indexes
 }
 
 func (c *connWrapper) GetIndexColumns(ctx context.Context, tableName, indexName string) (columns []string, _ error) {
-	d, err := c.tableDescription(ctx, c.normalizePath(tableName))
+	description, err := c.tableDescription(ctx, c.normalizePath(tableName))
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	for i := range d.Indexes {
-		if d.Indexes[i].Name == indexName {
-			columns = append(columns, d.Indexes[i].IndexColumns...)
+	for i := range description.Indexes {
+		if description.Indexes[i].Name == indexName {
+			columns = append(columns, description.Indexes[i].IndexColumns...)
 		}
 	}
 
@@ -221,13 +221,13 @@ func (c *connWrapper) GetIndexColumns(ctx context.Context, tableName, indexName 
 }
 
 func (c *connWrapper) IsColumnExists(ctx context.Context, tableName, columnName string) (columnExists bool, _ error) {
-	d, err := c.tableDescription(ctx, c.normalizePath(tableName))
+	description, err := c.tableDescription(ctx, c.normalizePath(tableName))
 	if err != nil {
 		return false, xerrors.WithStackTrace(err)
 	}
 
-	for i := range d.Columns {
-		if d.Columns[i].Name == columnName {
+	for i := range description.Columns {
+		if description.Columns[i].Name == columnName {
 			return true, nil
 		}
 	}

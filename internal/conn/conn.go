@@ -152,16 +152,16 @@ func (c *conn) SetState(ctx context.Context, s State) State {
 	return c.setState(ctx, s)
 }
 
-func (c *conn) setState(ctx context.Context, s State) State {
-	if state := State(c.state.Swap(uint32(s))); state != s {
+func (c *conn) setState(ctx context.Context, newState State) State {
+	if state := State(c.state.Swap(uint32(newState))); state != newState {
 		trace.DriverOnConnStateChange(
 			c.config.Trace(), &ctx,
 			stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/conn.(*conn).setState"),
 			c.endpoint.Copy(), state,
-		)(s)
+		)(newState)
 	}
 
-	return s
+	return newState
 }
 
 func (c *conn) Unban(ctx context.Context) State {

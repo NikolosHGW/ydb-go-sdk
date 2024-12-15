@@ -8,14 +8,14 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/internal/xerrors"
 )
 
-func Unwrap[T *sql.DB | *sql.Conn](v T) (connector *Connector, _ error) {
-	switch vv := any(v).(type) {
+func Unwrap[T *sql.DB | *sql.Conn](sqlResource T) (connector *Connector, _ error) {
+	switch vv := any(sqlResource).(type) {
 	case *sql.DB:
 		if c, ok := vv.Driver().(*Connector); ok {
 			return c, nil
 		}
 
-		return nil, xerrors.WithStackTrace(fmt.Errorf("%T is not a *driverWrapper", v))
+		return nil, xerrors.WithStackTrace(fmt.Errorf("%T is not a *driverWrapper", sqlResource))
 	case *sql.Conn:
 		if err := vv.Raw(func(driverConn interface{}) error {
 			if cc, ok := driverConn.(*connWrapper); ok {

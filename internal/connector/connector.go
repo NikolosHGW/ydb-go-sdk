@@ -113,7 +113,7 @@ func (c *Connector) Open(name string) (driver.Conn, error) {
 func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	switch c.queryProcessor {
 	case QUERY_SERVICE:
-		s, err := query.CreateSession(ctx, c.Query())
+		newSession, err := query.CreateSession(ctx, c.Query())
 		if err != nil {
 			return nil, xerrors.WithStackTrace(err)
 		}
@@ -121,7 +121,7 @@ func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 		id := uuid.New()
 
 		conn := &connWrapper{
-			conn: querySql.New(ctx, c, s, append(
+			conn: querySql.New(ctx, c, newSession, append(
 				c.QueryOpts,
 				querySql.WithOnClose(func() {
 					c.conns.Delete(id)
@@ -135,7 +135,7 @@ func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 		return conn, nil
 
 	case TABLE_SERVICE:
-		s, err := c.Table().CreateSession(ctx) //nolint:staticcheck
+		newSession, err := c.Table().CreateSession(ctx) //nolint:staticcheck
 		if err != nil {
 			return nil, xerrors.WithStackTrace(err)
 		}
@@ -143,7 +143,7 @@ func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 		id := uuid.New()
 
 		conn := &connWrapper{
-			conn: tableSql.New(ctx, c, s, append(c.TableOpts,
+			conn: tableSql.New(ctx, c, newSession, append(c.TableOpts,
 				tableSql.WithOnClose(func() {
 					c.conns.Delete(id)
 				}))...,
@@ -183,7 +183,7 @@ func (c *Connector) Close() error {
 }
 
 func Open(parent ydbDriver, balancer grpc.ClientConnInterface, opts ...Option) (_ *Connector, err error) {
-	c := &Connector{
+	connector := &Connector{
 		parent:         parent,
 		balancer:       balancer,
 		queryProcessor: TABLE_SERVICE,
@@ -196,18 +196,18 @@ func Open(parent ydbDriver, balancer grpc.ClientConnInterface, opts ...Option) (
 
 	for _, opt := range opts {
 		if opt != nil {
-			if err = opt.Apply(c); err != nil {
+			if err = opt.Apply(connector); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	if c.idleThreshold > 0 {
-		ctx, cancel := xcontext.WithDone(context.Background(), c.done)
+	if connector.idleThreshold > 0 {
+		ctx, cancel := xcontext.WithDone(context.Background(), connector.done)
 		go func() {
 			defer cancel()
 			for {
-				idleThresholdTimer := c.clock.NewTimer(c.idleThreshold)
+				idleThresholdTimer := connector.clock.NewTimer(connector.idleThreshold)
 				select {
 				case <-ctx.Done():
 					idleThresholdTimer.Stop()
@@ -215,8 +215,8 @@ func Open(parent ydbDriver, balancer grpc.ClientConnInterface, opts ...Option) (
 					return
 				case <-idleThresholdTimer.Chan():
 					idleThresholdTimer.Stop() // no really need, stop for common style only
-					c.conns.Range(func(_ uuid.UUID, cc *connWrapper) bool {
-						if c.clock.Since(cc.LastUsage()) > c.idleThreshold {
+					connector.conns.Range(func(_ uuid.UUID, cc *connWrapper) bool {
+						if connector.clock.Since(cc.LastUsage()) > connector.idleThreshold {
 							_ = cc.Close()
 						}
 
@@ -227,5 +227,5 @@ func Open(parent ydbDriver, balancer grpc.ClientConnInterface, opts ...Option) (
 		}()
 	}
 
-	return c, nil
+	return connector, nil
 }

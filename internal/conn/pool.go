@@ -160,13 +160,13 @@ func (p *Pool) Release(ctx context.Context) (finalErr error) {
 	)
 
 	wg.Add(cap(errCh))
-	p.conns.Range(func(_ string, c *conn) bool {
+	p.conns.Range(func(_ string, currentConn *conn) bool {
 		go func(c closer.Closer) {
 			defer wg.Done()
 			if err := c.Close(ctx); err != nil {
 				errCh <- err
 			}
-		}(c)
+		}(currentConn)
 
 		return true
 	})

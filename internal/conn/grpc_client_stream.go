@@ -72,7 +72,7 @@ func (s *grpcClientStream) CloseSend() (err error) {
 	return nil
 }
 
-func (s *grpcClientStream) SendMsg(m interface{}) (err error) {
+func (s *grpcClientStream) SendMsg(msg interface{}) (err error) {
 	var (
 		ctx    = s.streamCtx
 		onDone = trace.DriverOnConnStreamSendMsg(s.parentConn.config.Trace(), &ctx,
@@ -86,7 +86,7 @@ func (s *grpcClientStream) SendMsg(m interface{}) (err error) {
 	stop := s.parentConn.lastUsage.Start()
 	defer stop()
 
-	err = s.stream.SendMsg(m)
+	err = s.stream.SendMsg(msg)
 	if err != nil {
 		if xerrors.IsContextError(err) {
 			return xerrors.WithStackTrace(err)
@@ -124,7 +124,7 @@ func (s *grpcClientStream) finish(err error) {
 	s.streamCancel()
 }
 
-func (s *grpcClientStream) RecvMsg(m interface{}) (err error) { //nolint:funlen
+func (s *grpcClientStream) RecvMsg(msg interface{}) (err error) { //nolint:funlen
 	var (
 		ctx    = s.streamCtx
 		onDone = trace.DriverOnConnStreamRecvMsg(s.parentConn.config.Trace(), &ctx,
@@ -141,7 +141,7 @@ func (s *grpcClientStream) RecvMsg(m interface{}) (err error) { //nolint:funlen
 	stop := s.parentConn.lastUsage.Start()
 	defer stop()
 
-	err = s.stream.RecvMsg(m)
+	err = s.stream.RecvMsg(msg)
 	if err != nil {
 		if xerrors.Is(err, io.EOF) {
 			return io.EOF
@@ -175,7 +175,7 @@ func (s *grpcClientStream) RecvMsg(m interface{}) (err error) { //nolint:funlen
 	}
 
 	if s.wrapping {
-		if operation, ok := m.(operation.Status); ok {
+		if operation, ok := msg.(operation.Status); ok {
 			if status := operation.GetStatus(); status != Ydb.StatusIds_SUCCESS {
 				return xerrors.WithStackTrace(xerrors.Operation(
 					xerrors.FromOperation(operation),

@@ -64,7 +64,7 @@ func createSession(
 	opts ...sessionOption,
 ) (*session, error) {
 	sessionCtx, cancel := xcontext.WithCancel(xcontext.ValueOnly(ctx))
-	s := &session{
+	newSession := &session{
 		client:            client,
 		trace:             &trace.Coordination{},
 		ctx:               sessionCtx,
@@ -74,11 +74,11 @@ func createSession(
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		opt(newSession)
 	}
 
 	sessionStartedChan := make(chan struct{})
-	go s.mainLoop(xcontext.ValueOnly(ctx), path, sessionStartedChan)
+	go newSession.mainLoop(xcontext.ValueOnly(ctx), path, sessionStartedChan)
 
 	select {
 	case <-ctx.Done():
@@ -86,12 +86,12 @@ func createSession(
 
 		return nil, xerrors.WithStackTrace(ctx.Err())
 	case <-sessionStartedChan:
-		for _, f := range s.onCreate {
-			f(s)
+		for _, f := range newSession.onCreate {
+			f(newSession)
 		}
 	}
 
-	return s, nil
+	return newSession, nil
 }
 
 func newProtectionKey() []byte {
