@@ -1271,23 +1271,23 @@ func TestExactlyOneResultSetFromResult(t *testing.T) {
 		rs, err := exactlyOneResultSetFromResult(ctx, r)
 		require.NoError(t, err)
 		var (
-			a uint64
-			b string
+			unit64Value uint64
+			testString  string
 		)
 		r1, err1 := rs.NextRow(ctx)
 		require.NoError(t, err1)
 		require.NotNil(t, r1)
-		scanErr1 := r1.Scan(&a, &b)
+		scanErr1 := r1.Scan(&unit64Value, &testString)
 		require.NoError(t, scanErr1)
-		require.EqualValues(t, 1, a)
-		require.EqualValues(t, "1", b)
+		require.EqualValues(t, 1, unit64Value)
+		require.EqualValues(t, "1", testString)
 		r2, err2 := rs.NextRow(ctx)
 		require.NoError(t, err2)
 		require.NotNil(t, r2)
-		scanErr2 := r2.Scan(&a, &b)
+		scanErr2 := r2.Scan(&unit64Value, &testString)
 		require.NoError(t, scanErr2)
-		require.EqualValues(t, 2, a)
-		require.EqualValues(t, "2", b)
+		require.EqualValues(t, 2, unit64Value)
+		require.EqualValues(t, "2", testString)
 		r3, err3 := rs.NextRow(ctx)
 		require.ErrorIs(t, err3, io.EOF)
 		require.Nil(t, r3)
@@ -1558,34 +1558,34 @@ func TestCloseResultOnCloseClosableResultSet(t *testing.T) {
 	rs, err := readResultSet(ctx, r)
 	require.NoError(t, err)
 	var (
-		a uint64
-		b string
+		uint64Value uint64
+		testString  string
 	)
 	r1, err1 := rs.NextRow(ctx)
 	require.NoError(t, err1)
 	require.NotNil(t, r1)
-	scanErr1 := r1.Scan(&a, &b)
+	scanErr1 := r1.Scan(&uint64Value, &testString)
 	require.NoError(t, scanErr1)
-	require.EqualValues(t, 1, a)
-	require.EqualValues(t, "1", b)
+	require.EqualValues(t, 1, uint64Value)
+	require.EqualValues(t, "1", testString)
 	r2, err2 := rs.NextRow(ctx)
 	require.NoError(t, err2)
 	require.NotNil(t, r2)
-	scanErr2 := r2.Scan(&a, &b)
+	scanErr2 := r2.Scan(&uint64Value, &testString)
 	require.NoError(t, scanErr2)
-	require.EqualValues(t, 2, a)
-	require.EqualValues(t, "2", b)
+	require.EqualValues(t, 2, uint64Value)
+	require.EqualValues(t, "2", testString)
 	r3, err3 := rs.NextRow(ctx)
 	require.NoError(t, err3)
-	scanErr3 := r3.Scan(&a, &b)
-	require.EqualValues(t, 3, a)
-	require.EqualValues(t, "3", b)
+	scanErr3 := r3.Scan(&uint64Value, &testString)
+	require.EqualValues(t, 3, uint64Value)
+	require.EqualValues(t, "3", testString)
 	require.NoError(t, scanErr3)
 	r4, err4 := rs.NextRow(ctx)
 	require.NoError(t, err4)
-	scanErr4 := r4.Scan(&a, &b)
-	require.EqualValues(t, 4, a)
-	require.EqualValues(t, "4", b)
+	scanErr4 := r4.Scan(&uint64Value, &testString)
+	require.EqualValues(t, 4, uint64Value)
+	require.EqualValues(t, "4", testString)
 	require.NoError(t, scanErr4)
 	r5, err5 := rs.NextRow(ctx)
 	require.ErrorIs(t, err5, io.EOF)
@@ -2287,9 +2287,9 @@ func TestResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -2306,12 +2306,12 @@ func TestResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.NotNil(t, s)
-			require.Equal(t, "123", s.QueryPlan())
-			require.Equal(t, "456", s.QueryAST())
-			require.Equal(t, time.Microsecond*100, s.TotalDuration())
-			require.Equal(t, time.Microsecond*200, s.TotalCPUTime())
-			require.Equal(t, time.Microsecond*300, s.ProcessCPUTime())
+			require.NotNil(t, queryStat)
+			require.Equal(t, "123", queryStat.QueryPlan())
+			require.Equal(t, "456", queryStat.QueryAST())
+			require.Equal(t, time.Microsecond*100, queryStat.TotalDuration())
+			require.Equal(t, time.Microsecond*200, queryStat.TotalCPUTime())
+			require.Equal(t, time.Microsecond*300, queryStat.ProcessCPUTime())
 		})
 		t.Run("WithLastPart", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(xtest.Context(t))
@@ -4418,9 +4418,9 @@ func TestMaterializedResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -4437,12 +4437,12 @@ func TestMaterializedResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.NotNil(t, s)
-			require.Equal(t, "123", s.QueryPlan())
-			require.Equal(t, "456", s.QueryAST())
-			require.Equal(t, time.Microsecond*100, s.TotalDuration())
-			require.Equal(t, time.Microsecond*200, s.TotalCPUTime())
-			require.Equal(t, time.Microsecond*300, s.ProcessCPUTime())
+			require.NotNil(t, queryStat)
+			require.Equal(t, "123", queryStat.QueryPlan())
+			require.Equal(t, "456", queryStat.QueryAST())
+			require.Equal(t, time.Microsecond*100, queryStat.TotalDuration())
+			require.Equal(t, time.Microsecond*200, queryStat.TotalCPUTime())
+			require.Equal(t, time.Microsecond*300, queryStat.ProcessCPUTime())
 		})
 	})
 }

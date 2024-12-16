@@ -129,21 +129,21 @@ func TestTxOnCompleted(t *testing.T) {
 		require.Equal(t, []error{nil}, completed)
 	})
 	t.Run("OnCommitTxFailed", func(t *testing.T) {
-		e := fixenv.New(t)
+		envt := fixenv.New(t)
 
 		testError := errors.New("test-error")
 
-		QueryGrpcMock(e).EXPECT().CommitTransaction(gomock.Any(), gomock.Any()).Return(nil,
+		QueryGrpcMock(envt).EXPECT().CommitTransaction(gomock.Any(), gomock.Any()).Return(nil,
 			testError,
 		)
 
-		tx := TransactionOverGrpcMock(e)
+		tx := TransactionOverGrpcMock(envt)
 
 		var completed []error
 		tx.OnCompleted(func(transactionResult error) {
 			completed = append(completed, transactionResult)
 		})
-		err := tx.CommitTx(sf.Context(e))
+		err := tx.CommitTx(sf.Context(envt))
 		require.ErrorIs(t, err, testError)
 		require.Len(t, completed, 1)
 		require.ErrorIs(t, completed[0], err)

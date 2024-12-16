@@ -100,7 +100,10 @@ func (r *InitRequest) toProto() *Ydb_Topic.StreamReadMessage_InitRequest {
 		Consumer: r.Consumer,
 	}
 
-	proto.TopicsReadSettings = make([]*Ydb_Topic.StreamReadMessage_InitRequest_TopicReadSettings, len(r.TopicsReadSettings))
+	proto.TopicsReadSettings = make(
+		[]*Ydb_Topic.StreamReadMessage_InitRequest_TopicReadSettings,
+		len(r.TopicsReadSettings),
+	)
 	for topicSettingsIndex := range r.TopicsReadSettings {
 		srcTopicSettings := &r.TopicsReadSettings[topicSettingsIndex]
 		dstTopicSettings := &Ydb_Topic.StreamReadMessage_InitRequest_TopicReadSettings{}
@@ -400,7 +403,9 @@ type StartPartitionSessionRequest struct {
 	PartitionOffsets rawtopiccommon.OffsetRange
 }
 
-func (r *StartPartitionSessionRequest) fromProto(proto *Ydb_Topic.StreamReadMessage_StartPartitionSessionRequest) error {
+func (r *StartPartitionSessionRequest) fromProto(
+	proto *Ydb_Topic.StreamReadMessage_StartPartitionSessionRequest,
+) error {
 	if proto == nil {
 		return xerrors.WithStackTrace(errUnexpectedProtoNilStartPartitionSessionRequest)
 	}

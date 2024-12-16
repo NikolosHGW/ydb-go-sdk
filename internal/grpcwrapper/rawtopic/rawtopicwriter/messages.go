@@ -311,7 +311,9 @@ func (s *MessageWriteStatus) fromProto(status interface{}) error {
 		return nil
 
 	default:
-		return xerrors.WithStackTrace(xerrors.Wrap(fmt.Errorf("ydb: unexpected write status type: %v", reflect.TypeOf(valueType))))
+		return xerrors.WithStackTrace(
+			xerrors.Wrap(fmt.Errorf("ydb: unexpected write status type: %v", reflect.TypeOf(valueType))),
+		)
 	}
 }
 

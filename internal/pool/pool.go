@@ -126,7 +126,7 @@ func New[PT ItemConstraint[T], T any](
 	ctx context.Context,
 	opts ...Option[PT, T],
 ) *Pool[PT, T] {
-	p := &Pool[PT, T]{
+	newPool := &Pool[PT, T]{
 		config: Config[PT, T]{
 			trace:         &Trace{},
 			clock:         clockwork.NewRealClock(),
@@ -150,29 +150,29 @@ func New[PT ItemConstraint[T], T any](
 
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&p.config)
+			opt(&newPool.config)
 		}
 	}
 
-	if onNew := p.config.trace.OnNew; onNew != nil {
+	if onNew := newPool.config.trace.OnNew; onNew != nil {
 		onDone := onNew(&ctx,
 			stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/pool.New"),
 		)
 		if onDone != nil {
 			defer func() {
-				onDone(p.config.limit)
+				onDone(newPool.config.limit)
 			}()
 		}
 	}
 
-	p.createItem = makeAsyncCreateItemFunc(p)
-	if p.config.closeItem != nil {
-		p.closeItem = p.config.closeItem
+	newPool.createItem = makeAsyncCreateItemFunc(newPool)
+	if newPool.config.closeItem != nil {
+		newPool.closeItem = newPool.config.closeItem
 	} else {
-		p.closeItem = makeAsyncCloseItemFunc[PT, T](p)
+		newPool.closeItem = makeAsyncCloseItemFunc[PT, T](newPool)
 	}
 
-	return p
+	return newPool
 }
 
 // defaultCreateItem returns a new item
@@ -184,12 +184,12 @@ func defaultCreateItem[T any, PT ItemConstraint[T]](context.Context) (PT, error)
 
 // makeAsyncCreateItemFunc wraps the createItem function with timeout handling
 func makeAsyncCreateItemFunc[PT ItemConstraint[T], T any]( //nolint:funlen
-	p *Pool[PT, T],
+	currentPool *Pool[PT, T],
 ) func(ctx context.Context) (PT, error) {
 	return func(ctx context.Context) (PT, error) {
-		if !xsync.WithLock(&p.mu, func() bool {
-			if len(p.index)+p.createInProgress < p.config.limit {
-				p.createInProgress++
+		if !xsync.WithLock(&currentPool.mu, func() bool {
+			if len(currentPool.index)+currentPool.createInProgress < currentPool.config.limit {
+				currentPool.createInProgress++
 
 				return true
 			}
@@ -199,8 +199,8 @@ func makeAsyncCreateItemFunc[PT ItemConstraint[T], T any]( //nolint:funlen
 			return nil, xerrors.WithStackTrace(errPoolIsOverflow)
 		}
 		defer func() {
-			p.mu.WithLock(func() {
-				p.createInProgress--
+			currentPool.mu.WithLock(func() {
+				currentPool.createInProgress--
 			})
 		}()
 
@@ -217,20 +217,20 @@ func makeAsyncCreateItemFunc[PT ItemConstraint[T], T any]( //nolint:funlen
 		go func() {
 			defer close(ch)
 
-			createCtx, cancelCreate := xcontext.WithDone(xcontext.ValueOnly(ctx), p.done)
+			createCtx, cancelCreate := xcontext.WithDone(xcontext.ValueOnly(ctx), currentPool.done)
 			defer cancelCreate()
 
-			if d := p.config.createTimeout; d > 0 {
+			if d := currentPool.config.createTimeout; d > 0 {
 				createCtx, cancelCreate = xcontext.WithTimeout(createCtx, d)
 				defer cancelCreate()
 			}
 
-			newItem, err := p.config.createItem(createCtx)
+			newItem, err := currentPool.config.createItem(createCtx)
 			if newItem != nil {
-				p.mu.WithLock(func() {
+				currentPool.mu.WithLock(func() {
 					var useCounter uint64
-					p.index[newItem] = itemInfo[PT, T]{
-						lastUsage:  p.config.clock.Now(),
+					currentPool.index[newItem] = itemInfo[PT, T]{
+						lastUsage:  currentPool.config.clock.Now(),
 						useCounter: &useCounter,
 					}
 				})
@@ -249,12 +249,12 @@ func makeAsyncCreateItemFunc[PT ItemConstraint[T], T any]( //nolint:funlen
 					return
 				}
 
-				_ = p.putItem(createCtx, newItem)
+				_ = currentPool.putItem(createCtx, newItem)
 			}
 		}()
 
 		select {
-		case <-p.done:
+		case <-currentPool.done:
 			return nil, xerrors.WithStackTrace(errClosedPool)
 		case <-ctx.Done():
 			return nil, xerrors.WithStackTrace(ctx.Err())
@@ -294,14 +294,14 @@ func (p *Pool[PT, T]) Stats() Stats {
 }
 
 func makeAsyncCloseItemFunc[PT ItemConstraint[T], T any](
-	p *Pool[PT, T],
+	currentPool *Pool[PT, T],
 ) func(ctx context.Context, item PT) {
 	return func(ctx context.Context, item PT) {
 		go func() {
-			closeItemCtx, closeItemCancel := xcontext.WithDone(xcontext.ValueOnly(ctx), p.done)
+			closeItemCtx, closeItemCancel := xcontext.WithDone(xcontext.ValueOnly(ctx), currentPool.done)
 			defer closeItemCancel()
 
-			if d := p.config.closeTimeout; d > 0 {
+			if d := currentPool.config.closeTimeout; d > 0 {
 				closeItemCtx, closeItemCancel = xcontext.WithTimeout(ctx, d)
 				defer closeItemCancel()
 			}
@@ -317,7 +317,7 @@ func (p *Pool[PT, T]) changeState(changeState func() Stats) {
 	}
 }
 
-func (p *Pool[PT, T]) try(ctx context.Context, f func(ctx context.Context, item PT) error) (finalErr error) {
+func (p *Pool[PT, T]) try(ctx context.Context, fn func(ctx context.Context, item PT) error) (finalErr error) {
 	if onTry := p.config.trace.OnTry; onTry != nil {
 		onDone := onTry(&ctx,
 			stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/pool.(*Pool).try"),
@@ -357,7 +357,7 @@ func (p *Pool[PT, T]) try(ctx context.Context, f func(ctx context.Context, item 
 		_ = p.putItem(ctx, item)
 	}()
 
-	err = f(ctx, item)
+	err = fn(ctx, item)
 	if err != nil {
 		return xerrors.WithStackTrace(err)
 	}
@@ -367,7 +367,7 @@ func (p *Pool[PT, T]) try(ctx context.Context, f func(ctx context.Context, item 
 
 func (p *Pool[PT, T]) With(
 	ctx context.Context,
-	f func(ctx context.Context, item PT) error,
+	fn func(ctx context.Context, item PT) error,
 	opts ...retry.Option,
 ) (finalErr error) {
 	var attempts int
@@ -385,7 +385,7 @@ func (p *Pool[PT, T]) With(
 
 	err := retry.Retry(ctx, func(ctx context.Context) error {
 		attempts++
-		err := p.try(ctx, f)
+		err := p.try(ctx, fn)
 		if err != nil {
 			return xerrors.WithStackTrace(err)
 		}

@@ -1059,22 +1059,22 @@ func TestClient(t *testing.T) {
 				r1, err := rs.NextRow(ctx)
 				require.NoError(t, err)
 				var (
-					a uint64
-					b string
-					c bool
+					uint64Value uint64
+					testString  string
+					testBool    bool
 				)
-				err = r1.Scan(&a, &b, &c)
+				err = r1.Scan(&uint64Value, &testString, &testBool)
 				require.NoError(t, err)
-				require.EqualValues(t, 1, a)
-				require.EqualValues(t, "1", b)
-				require.EqualValues(t, true, c)
+				require.EqualValues(t, 1, uint64Value)
+				require.EqualValues(t, "1", testString)
+				require.EqualValues(t, true, testBool)
 				r2, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r2.Scan(&a, &b, &c)
+				err = r2.Scan(&uint64Value, &testString, &testBool)
 				require.NoError(t, err)
-				require.EqualValues(t, 2, a)
-				require.EqualValues(t, "2", b)
-				require.EqualValues(t, false, c)
+				require.EqualValues(t, 2, uint64Value)
+				require.EqualValues(t, "2", testString)
+				require.EqualValues(t, false, testBool)
 				r3, err := rs.NextRow(ctx)
 				require.ErrorIs(t, err, io.EOF)
 				require.Nil(t, r3)
