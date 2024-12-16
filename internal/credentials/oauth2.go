@@ -232,7 +232,7 @@ type tokenSourceOption struct {
 	tokenSourceType int
 }
 
-func (tokenSource *tokenSourceOption) ApplyOauth2CredentialsOption(c *oauth2TokenExchange) error {
+func (tokenSource *tokenSourceOption) ApplyOauth2CredentialsOption(exchangeCredential *oauth2TokenExchange) error {
 	src := tokenSource.source
 	var err error
 	if src == nil {
@@ -243,9 +243,9 @@ func (tokenSource *tokenSourceOption) ApplyOauth2CredentialsOption(c *oauth2Toke
 	}
 	switch tokenSource.tokenSourceType {
 	case SubjectTokenSourceType:
-		c.subjectTokenSource = src
+		exchangeCredential.subjectTokenSource = src
 	case ActorTokenSourceType:
-		c.actorTokenSource = src
+		exchangeCredential.actorTokenSource = src
 	}
 
 	return nil
@@ -1270,7 +1270,7 @@ type rsaPrivateKeyPemFileOption struct {
 	path string
 }
 
-func (key *rsaPrivateKeyPemFileOption) ApplyJWTTokenSourceOption(s *jwtTokenSource) error {
+func (key *rsaPrivateKeyPemFileOption) ApplyJWTTokenSourceOption(tokenSource *jwtTokenSource) error {
 	bytes, err := readFileContent(key.path)
 	if err != nil {
 		return xerrors.WithStackTrace(fmt.Errorf("%w: %w", errCouldNotReadPrivateKeyFile, err))
@@ -1278,7 +1278,7 @@ func (key *rsaPrivateKeyPemFileOption) ApplyJWTTokenSourceOption(s *jwtTokenSour
 
 	o := rsaPrivateKeyPemContentOption{bytes}
 
-	return o.ApplyJWTTokenSourceOption(s)
+	return o.ApplyJWTTokenSourceOption(tokenSource)
 }
 
 func WithRSAPrivateKeyPEMFile(path string) *rsaPrivateKeyPemFileOption {

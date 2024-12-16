@@ -51,23 +51,23 @@ func TestFromBytes(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			x := FromBytes(test.bts, test.precision, test.scale)
-			p := Append(nil, x)
-			y := FromBytes(p, test.precision, test.scale)
-			if x.Cmp(y) != 0 {
+			initialValue := FromBytes(test.bts, test.precision, test.scale)
+			serializedBytes := Append(nil, initialValue)
+			reparsedValue := FromBytes(serializedBytes, test.precision, test.scale)
+			if initialValue.Cmp(reparsedValue) != 0 {
 				t.Errorf(
 					"parsed bytes serialized to different value: %v; want %v",
-					x, y,
+					initialValue, reparsedValue,
 				)
 			}
-			formatted := Format(x, test.precision, test.scale)
+			formatted := Format(initialValue, test.precision, test.scale)
 			if test.format != formatted {
 				t.Errorf("unexpected decimal format. Expected: %s, actual %s", test.format, formatted)
 			}
 			t.Logf(
 				"%s %s",
-				Format(x, test.precision, test.scale),
-				Format(y, test.precision, test.scale),
+				Format(initialValue, test.precision, test.scale),
+				Format(reparsedValue, test.precision, test.scale),
 			)
 		})
 	}

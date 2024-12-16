@@ -53,18 +53,18 @@ func runTokenExchangeServer(
 	returnedErr := !firstReplyIsError
 	returnedErrPtr := &returnedErr
 
-	mux.HandleFunc("/exchange", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/exchange", func(responseWriter http.ResponseWriter, r *http.Request) {
 		if serverRequests != nil {
 			serverRequests.Add(1)
 		}
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			WriteErr(w, err)
+			WriteErr(responseWriter, err)
 		}
 
 		params, err := url.ParseQuery(string(body))
 		if err != nil {
-			WriteErr(w, err)
+			WriteErr(responseWriter, err)
 		}
 		expectedParams := url.Values{}
 		expectedParams.Set("scope", "test_scope1 test_scope2")
@@ -75,14 +75,14 @@ func runTokenExchangeServer(
 		expectedParams.Set("subject_token_type", "urn:ietf:params:oauth:token-type:test_jwt")
 
 		if !reflect.DeepEqual(expectedParams, params) {
-			WriteResponse(w, 555, fmt.Sprintf("Params are not as expected: \"%s\" != \"%s\"",
+			WriteResponse(responseWriter, 555, fmt.Sprintf("Params are not as expected: \"%s\" != \"%s\"",
 				expectedParams.Encode(), body), "text/html") // error will be checked in test thread
 		} else {
 			if !*returnedErrPtr {
-				WriteResponse(w, http.StatusInternalServerError, "test error", "text/html")
+				WriteResponse(responseWriter, http.StatusInternalServerError, "test error", "text/html")
 				*returnedErrPtr = true
 			} else {
-				WriteResponse(w, currentTestParams.Status, currentTestParams.Response, "application/json")
+				WriteResponse(responseWriter, currentTestParams.Status, currentTestParams.Response, "application/json")
 			}
 		}
 	})

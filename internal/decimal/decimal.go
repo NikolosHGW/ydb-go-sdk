@@ -55,29 +55,29 @@ func Err() *big.Int { return big.NewInt(0).Set(err) }
 // If given bytes contains value that is greater than given precision it
 // returns infinity or negative infinity value accordingly the bytes sign.
 func FromBytes(bts []byte, precision, scale uint32) *big.Int {
-	v := big.NewInt(0)
+	bigIntValue := big.NewInt(0)
 	if len(bts) == 0 {
-		return v
+		return bigIntValue
 	}
 
-	v.SetBytes(bts)
+	bigIntValue.SetBytes(bts)
 	neg := bts[0]&negMask != 0 //nolint:ifshort
 	if neg {
 		// Given bytes contains negative value.
 		// Interpret is as two's complement.
-		not(v)
-		v.Add(v, one)
-		v.Neg(v)
+		not(bigIntValue)
+		bigIntValue.Add(bigIntValue, one)
+		bigIntValue.Neg(bigIntValue)
 	}
-	if v.CmpAbs(pow(ten, precision)) >= 0 {
+	if bigIntValue.CmpAbs(pow(ten, precision)) >= 0 {
 		if neg {
-			v.Set(neginf)
+			bigIntValue.Set(neginf)
 		} else {
-			v.Set(inf)
+			bigIntValue.Set(inf)
 		}
 	}
 
-	return v
+	return bigIntValue
 }
 
 // FromInt128 returns big integer from given array. That is, it interprets
@@ -90,43 +90,43 @@ func FromInt128(p [16]byte, precision, scale uint32) *big.Int {
 // the corresponding big integer.
 //
 //nolint:funlen
-func Parse(s string, precision, scale uint32) (*big.Int, error) {
+func Parse(str string, precision, scale uint32) (*big.Int, error) {
 	if scale > precision {
-		return nil, precisionError(s, precision, scale)
+		return nil, precisionError(str, precision, scale)
 	}
 
-	v := big.NewInt(0)
-	if s == "" {
-		return v, nil
+	result := big.NewInt(0)
+	if str == "" {
+		return result, nil
 	}
 
-	neg := s[0] == '-' //nolint:ifshort,nolintlint
-	if neg || s[0] == '+' {
-		s = s[1:]
+	neg := str[0] == '-' //nolint:ifshort,nolintlint
+	if neg || str[0] == '+' {
+		str = str[1:]
 	}
-	if isInf(s) {
+	if isInf(str) {
 		if neg {
-			return v.Set(neginf), nil
+			return result.Set(neginf), nil
 		}
 
-		return v.Set(inf), nil
+		return result.Set(inf), nil
 	}
-	if isNaN(s) {
+	if isNaN(str) {
 		if neg {
-			return v.Set(negnan), nil
+			return result.Set(negnan), nil
 		}
 
-		return v.Set(nan), nil
+		return result.Set(nan), nil
 	}
 
 	integral := precision - scale
 
 	var dot bool
-	for ; len(s) > 0; s = s[1:] {
-		c := s[0]
-		if c == '.' {
+	for ; len(str) > 0; str = str[1:] {
+		currentChar := str[0]
+		if currentChar == '.' {
 			if dot {
-				return nil, syntaxError(s)
+				return nil, syntaxError(str)
 			}
 			dot = true
 
@@ -140,14 +140,14 @@ func Parse(s string, precision, scale uint32) (*big.Int, error) {
 			}
 		}
 
-		if !isDigit(c) {
-			return nil, syntaxError(s)
+		if !isDigit(currentChar) {
+			return nil, syntaxError(str)
 		}
 
-		v.Mul(v, ten)
-		v.Add(v, big.NewInt(int64(c-'0')))
+		result.Mul(result, ten)
+		result.Add(result, big.NewInt(int64(currentChar-'0')))
 
-		if !dot && v.Cmp(zero) > 0 && integral == 0 {
+		if !dot && result.Cmp(zero) > 0 && integral == 0 {
 			if neg {
 				return neginf, nil
 			}
@@ -157,68 +157,68 @@ func Parse(s string, precision, scale uint32) (*big.Int, error) {
 		integral--
 	}
 	//nolint:nestif
-	if len(s) > 0 { // Characters remaining.
-		c := s[0]
-		if !isDigit(c) {
-			return nil, syntaxError(s)
+	if len(str) > 0 { // Characters remaining.
+		currentChar := str[0]
+		if !isDigit(currentChar) {
+			return nil, syntaxError(str)
 		}
-		plus := c > '5'
-		if !plus && c == '5' {
-			var x big.Int
-			plus = x.And(v, one).Cmp(zero) != 0 // Last digit is not a zero.
-			for !plus && len(s) > 1 {
-				s = s[1:]
-				c := s[0]
-				if !isDigit(c) {
-					return nil, syntaxError(s)
+		plus := currentChar > '5'
+		if !plus && currentChar == '5' {
+			var tempInt big.Int
+			plus = tempInt.And(result, one).Cmp(zero) != 0 // Last digit is not a zero.
+			for !plus && len(str) > 1 {
+				str = str[1:]
+				currentChar := str[0]
+				if !isDigit(currentChar) {
+					return nil, syntaxError(str)
 				}
-				plus = c != '0'
+				plus = currentChar != '0'
 			}
 		}
 		if plus {
-			v.Add(v, one)
-			if v.Cmp(pow(ten, precision)) >= 0 {
-				v.Set(inf)
+			result.Add(result, one)
+			if result.Cmp(pow(ten, precision)) >= 0 {
+				result.Set(inf)
 			}
 		}
 	}
-	v.Mul(v, pow(ten, scale))
+	result.Mul(result, pow(ten, scale))
 	if neg {
-		v.Neg(v)
+		result.Neg(result)
 	}
 
-	return v, nil
+	return result, nil
 }
 
 // Format returns the string representation of x with the given precision and
 // scale.
 //
 //nolint:funlen
-func Format(x *big.Int, precision, scale uint32) string {
+func Format(value *big.Int, precision, scale uint32) string {
 	switch {
-	case x.CmpAbs(inf) == 0:
-		if x.Sign() < 0 {
+	case value.CmpAbs(inf) == 0:
+		if value.Sign() < 0 {
 			return "-inf"
 		}
 
 		return "inf"
 
-	case x.CmpAbs(nan) == 0:
-		if x.Sign() < 0 {
+	case value.CmpAbs(nan) == 0:
+		if value.Sign() < 0 {
 			return "-nan"
 		}
 
 		return "nan"
 
-	case x == nil:
+	case value == nil:
 		return "0"
 	}
 
-	v := big.NewInt(0).Set(x)
-	neg := x.Sign() < 0 //nolint:ifshort,nolintlint
+	positiveValue := big.NewInt(0).Set(value)
+	neg := value.Sign() < 0 //nolint:ifshort,nolintlint
 	if neg {
 		// Convert negative to positive.
-		v.Neg(x)
+		positiveValue.Neg(value)
 	}
 
 	// log_{10}(2^120) ~= 36.12, 37 decimal places
@@ -227,13 +227,13 @@ func Format(x *big.Int, precision, scale uint32) string {
 	pos := len(bts)
 
 	var digit big.Int
-	for ; v.Cmp(zero) > 0; v.Div(v, ten) {
+	for ; positiveValue.Cmp(zero) > 0; positiveValue.Div(positiveValue, ten) {
 		if precision == 0 {
 			return errorTag
 		}
 		precision--
 
-		digit.Mod(v, ten)
+		digit.Mod(positiveValue, ten)
 		d := int(digit.Int64())
 		if d != 0 || scale == 0 || pos > 0 {
 			const numbers = "0123456789"
@@ -290,16 +290,16 @@ func BigIntToByte(x *big.Int, precision, scale uint32) (p [16]byte) {
 	return p
 }
 
-func put(x *big.Int, p []byte) {
+func put(x *big.Int, data []byte) {
 	neg := x.Sign() < 0 //nolint:ifshort
 	if neg {
 		x = complement(x)
 	}
-	i := len(p)
+	i := len(data)
 	for _, d := range x.Bits() {
 		for j := 0; j < wordSize; j++ {
 			i--
-			p[i] = byte(d)
+			data[i] = byte(d)
 			d >>= 8
 		}
 	}
@@ -307,9 +307,9 @@ func put(x *big.Int, p []byte) {
 	if neg {
 		pad = 0xff
 	}
-	for 0 < i && i < len(p) {
+	for 0 < i && i < len(data) {
 		i--
-		p[i] = pad
+		data[i] = pad
 	}
 }
 
@@ -329,18 +329,18 @@ func size(x *big.Int) int {
 	return len(x.Bits()) * wordSize
 }
 
-func ensure(p []byte, n int) []byte {
+func ensure(data []byte, additionalBytes int) []byte {
 	var (
-		l = len(p)
-		c = cap(p)
+		currentLength   = len(data)
+		currentCapacity = cap(data)
 	)
-	if c-l < n {
-		cp := make([]byte, l+n)
-		copy(cp, p)
-		p = cp
+	if currentCapacity-currentLength < additionalBytes {
+		cp := make([]byte, currentLength+additionalBytes)
+		copy(cp, data)
+		data = cp
 	}
 
-	return p[:l+n]
+	return data[:currentLength+additionalBytes]
 }
 
 // not is almost the same as x.Not() but without handling the sign of x.
@@ -353,20 +353,20 @@ func not(x *big.Int) {
 }
 
 // pow returns new instance of big.Int equal to x^n.
-func pow(x *big.Int, n uint32) *big.Int {
+func pow(base *big.Int, exponent uint32) *big.Int {
 	var (
-		v = big.NewInt(1)
-		m = big.NewInt(0).Set(x)
+		result     = big.NewInt(1)
+		multiplier = big.NewInt(0).Set(base)
 	)
-	for n > 0 {
-		if n&1 != 0 {
-			v.Mul(v, m)
+	for exponent > 0 {
+		if exponent&1 != 0 {
+			result.Mul(result, multiplier)
 		}
-		n >>= 1
-		m.Mul(m, m)
+		exponent >>= 1
+		multiplier.Mul(multiplier, multiplier)
 	}
 
-	return v
+	return result
 }
 
 // complement returns two's complement of x.

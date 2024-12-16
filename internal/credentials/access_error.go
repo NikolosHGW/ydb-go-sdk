@@ -72,13 +72,13 @@ type credentialsUnauthenticatedErrorOption struct {
 	credentials Credentials
 }
 
-func (opt credentialsUnauthenticatedErrorOption) applyAuthErrorOption(w io.Writer) {
-	fmt.Fprint(w, "credentials:")
+func (opt credentialsUnauthenticatedErrorOption) applyAuthErrorOption(ioWriter io.Writer) {
+	fmt.Fprint(ioWriter, "credentials:")
 	if stringer, has := opt.credentials.(fmt.Stringer); has {
-		fmt.Fprintf(w, "%q", stringer.String())
+		fmt.Fprintf(ioWriter, "%q", stringer.String())
 	} else {
 		t := reflect.TypeOf(opt.credentials)
-		fmt.Fprintf(w, "%q", t.PkgPath()+"."+t.Name())
+		fmt.Fprintf(ioWriter, "%q", t.PkgPath()+"."+t.Name())
 	}
 }
 
