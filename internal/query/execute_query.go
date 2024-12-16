@@ -141,13 +141,13 @@ func execute(
 	return r, nil
 }
 
-func readAll(ctx context.Context, r *streamResult) error {
+func readAll(ctx context.Context, currentStreamResult *streamResult) error {
 	defer func() {
-		_ = r.Close(ctx)
+		_ = currentStreamResult.Close(ctx)
 	}()
 
 	for {
-		_, err := r.nextResultSet(ctx)
+		_, err := currentStreamResult.nextResultSet(ctx)
 		if err != nil {
 			if xerrors.Is(err, io.EOF) {
 				return nil

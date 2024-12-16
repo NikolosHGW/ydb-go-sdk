@@ -48,7 +48,7 @@ func TestClient(t *testing.T) {
 				Status: Ydb.StatusIds_SUCCESS,
 			}, nil)
 			attached := 0
-			s, err := createSession(ctx, client, session.WithTrace(
+			newSession, err := createSession(ctx, client, session.WithTrace(
 				&trace.Query{
 					OnSessionAttach: func(info trace.QuerySessionAttachStartInfo) func(info trace.QuerySessionAttachDoneInfo) {
 						return func(info trace.QuerySessionAttachDoneInfo) {
@@ -65,9 +65,9 @@ func TestClient(t *testing.T) {
 				},
 			))
 			require.NoError(t, err)
-			require.EqualValues(t, "test", s.ID())
+			require.EqualValues(t, "test", newSession.ID())
 			require.EqualValues(t, 1, attached)
-			err = s.Close(ctx)
+			err = newSession.Close(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 0, attached)
 		})
@@ -847,7 +847,7 @@ func TestClient(t *testing.T) {
 	t.Run("Query", func(t *testing.T) {
 		t.Run("HappyWay", func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			r, err := clientQuery(ctx, testPool(ctx, func(ctx context.Context) (*Session, error) {
+			queryResult, err := clientQuery(ctx, testPool(ctx, func(ctx context.Context) (*Session, error) {
 				stream := NewMockQueryService_ExecuteQueryClient(ctrl)
 				stream.EXPECT().Recv().Return(&Ydb_Query.ExecuteQueryResponsePart{
 					Status: Ydb.StatusIds_SUCCESS,
@@ -1013,48 +1013,48 @@ func TestClient(t *testing.T) {
 			}), "")
 			require.NoError(t, err)
 			{
-				rs, err := r.NextResultSet(ctx)
+				rs, err := queryResult.NextResultSet(ctx)
 				require.NoError(t, err)
 				r1, err := rs.NextRow(ctx)
 				require.NoError(t, err)
 				var (
-					a uint64
-					b string
+					uint64Value uint64
+					testString  string
 				)
-				err = r1.Scan(&a, &b)
+				err = r1.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 1, a)
-				require.EqualValues(t, "1", b)
+				require.EqualValues(t, 1, uint64Value)
+				require.EqualValues(t, "1", testString)
 				r2, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r2.Scan(&a, &b)
+				err = r2.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 2, a)
-				require.EqualValues(t, "2", b)
+				require.EqualValues(t, 2, uint64Value)
+				require.EqualValues(t, "2", testString)
 				r3, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r3.Scan(&a, &b)
+				err = r3.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 3, a)
-				require.EqualValues(t, "3", b)
+				require.EqualValues(t, 3, uint64Value)
+				require.EqualValues(t, "3", testString)
 				r4, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r4.Scan(&a, &b)
+				err = r4.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 4, a)
-				require.EqualValues(t, "4", b)
+				require.EqualValues(t, 4, uint64Value)
+				require.EqualValues(t, "4", testString)
 				r5, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r5.Scan(&a, &b)
+				err = r5.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 5, a)
-				require.EqualValues(t, "5", b)
+				require.EqualValues(t, 5, uint64Value)
+				require.EqualValues(t, "5", testString)
 				r6, err := rs.NextRow(ctx)
 				require.ErrorIs(t, err, io.EOF)
 				require.Nil(t, r6)
 			}
 			{
-				rs, err := r.NextResultSet(ctx)
+				rs, err := queryResult.NextResultSet(ctx)
 				require.NoError(t, err)
 				r1, err := rs.NextRow(ctx)
 				require.NoError(t, err)
@@ -1191,37 +1191,37 @@ func TestClient(t *testing.T) {
 				r1, err := rs.NextRow(ctx)
 				require.NoError(t, err)
 				var (
-					a uint64
-					b string
+					uint64Value uint64
+					testString  string
 				)
-				err = r1.Scan(&a, &b)
+				err = r1.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 1, a)
-				require.EqualValues(t, "1", b)
+				require.EqualValues(t, 1, uint64Value)
+				require.EqualValues(t, "1", testString)
 				r2, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r2.Scan(&a, &b)
+				err = r2.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 2, a)
-				require.EqualValues(t, "2", b)
+				require.EqualValues(t, 2, uint64Value)
+				require.EqualValues(t, "2", testString)
 				r3, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r3.Scan(&a, &b)
+				err = r3.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 3, a)
-				require.EqualValues(t, "3", b)
+				require.EqualValues(t, 3, uint64Value)
+				require.EqualValues(t, "3", testString)
 				r4, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r4.Scan(&a, &b)
+				err = r4.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 4, a)
-				require.EqualValues(t, "4", b)
+				require.EqualValues(t, 4, uint64Value)
+				require.EqualValues(t, "4", testString)
 				r5, err := rs.NextRow(ctx)
 				require.NoError(t, err)
-				err = r5.Scan(&a, &b)
+				err = r5.Scan(&uint64Value, &testString)
 				require.NoError(t, err)
-				require.EqualValues(t, 5, a)
-				require.EqualValues(t, "5", b)
+				require.EqualValues(t, 5, uint64Value)
+				require.EqualValues(t, "5", testString)
 				r6, err := rs.NextRow(ctx)
 				require.ErrorIs(t, err, io.EOF)
 				require.Nil(t, r6)

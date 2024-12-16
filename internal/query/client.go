@@ -54,7 +54,7 @@ func fetchScriptResults(ctx context.Context,
 	client Ydb_Query_V1.QueryServiceClient,
 	opID string, opts ...options.FetchScriptOption,
 ) (*options.FetchScriptResult, error) {
-	r, err := retry.RetryWithResult(ctx, func(ctx context.Context) (*options.FetchScriptResult, error) {
+	scriptResult, err := retry.RetryWithResult(ctx, func(ctx context.Context) (*options.FetchScriptResult, error) {
 		request := &options.FetchScriptResultsRequest{
 			FetchScriptResultsRequest: Ydb_Query.FetchScriptResultsRequest{
 				OperationId: opID,
@@ -94,14 +94,14 @@ func fetchScriptResults(ctx context.Context,
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	return r, nil
+	return scriptResult, nil
 }
 
 func (c *Client) FetchScriptResults(ctx context.Context,
 	opID string, opts ...options.FetchScriptOption,
 ) (*options.FetchScriptResult, error) {
-	r, err := retry.RetryWithResult(ctx, func(ctx context.Context) (*options.FetchScriptResult, error) {
-		r, err := fetchScriptResults(ctx, c.client, opID,
+	scriptResult, err := retry.RetryWithResult(ctx, func(ctx context.Context) (*options.FetchScriptResult, error) {
+		scriptResult, err := fetchScriptResults(ctx, c.client, opID,
 			append(opts, func(request *options.FetchScriptResultsRequest) {
 				request.Trace = c.config.Trace()
 			})...,
@@ -110,13 +110,13 @@ func (c *Client) FetchScriptResults(ctx context.Context,
 			return nil, xerrors.WithStackTrace(err)
 		}
 
-		return r, nil
+		return scriptResult, nil
 	}, retry.WithIdempotent(true))
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	return r, nil
+	return scriptResult, nil
 }
 
 type executeScriptSettings struct {
@@ -156,12 +156,12 @@ func executeScript(ctx context.Context,
 }
 
 func (c *Client) ExecuteScript(
-	ctx context.Context, q string, ttl time.Duration, opts ...options.Execute,
+	ctx context.Context, qry string, ttl time.Duration, opts ...options.Execute,
 ) (
 	op *options.ExecuteScriptOperation, err error,
 ) {
-	a := allocator.New()
-	defer a.Free()
+	alloc := allocator.New()
+	defer alloc.Free()
 
 	settings := &executeScriptSettings{
 		executeSettings: options.ExecuteSettings(opts...),
@@ -174,7 +174,7 @@ func (c *Client) ExecuteScript(
 		),
 	}
 
-	request, grpcOpts, err := executeQueryScriptRequest(a, q, settings)
+	request, grpcOpts, err := executeQueryScriptRequest(alloc, qry, settings)
 	if err != nil {
 		return op, xerrors.WithStackTrace(err)
 	}
@@ -203,17 +203,17 @@ func do(
 	op func(ctx context.Context, s *Session) error,
 	opts ...retry.Option,
 ) (finalErr error) {
-	err := pool.With(ctx, func(ctx context.Context, s *Session) error {
-		s.SetStatus(session.StatusInUse)
+	err := pool.With(ctx, func(ctx context.Context, currentSession *Session) error {
+		currentSession.SetStatus(session.StatusInUse)
 
-		err := op(ctx, s)
+		err := op(ctx, currentSession)
 		if err != nil {
-			s.SetStatus(session.StatusError)
+			currentSession.SetStatus(session.StatusError)
 
 			return xerrors.WithStackTrace(err)
 		}
 
-		s.SetStatus(session.StatusIdle)
+		currentSession.SetStatus(session.StatusIdle)
 
 		return nil
 	}, opts...)
@@ -514,36 +514,36 @@ func (c *Client) DoTx(ctx context.Context, op query.TxOperation, opts ...options
 	return nil
 }
 
-func CreateSession(ctx context.Context, c *Client) (*Session, error) {
-	s, err := retry.RetryWithResult(ctx, func(ctx context.Context) (*Session, error) {
+func CreateSession(ctx context.Context, currentClient *Client) (*Session, error) {
+	newSession, err := retry.RetryWithResult(ctx, func(ctx context.Context) (*Session, error) {
 		var (
 			createCtx    context.Context
 			cancelCreate context.CancelFunc
 		)
-		if d := c.config.SessionCreateTimeout(); d > 0 {
+		if d := currentClient.config.SessionCreateTimeout(); d > 0 {
 			createCtx, cancelCreate = xcontext.WithTimeout(ctx, d)
 		} else {
 			createCtx, cancelCreate = xcontext.WithCancel(ctx)
 		}
 		defer cancelCreate()
 
-		s, err := createSession(createCtx, c.client,
-			session.WithDeleteTimeout(c.config.SessionDeleteTimeout()),
-			session.WithTrace(c.config.Trace()),
+		newSession, err := createSession(createCtx, currentClient.client,
+			session.WithDeleteTimeout(currentClient.config.SessionDeleteTimeout()),
+			session.WithTrace(currentClient.config.Trace()),
 		)
 		if err != nil {
 			return nil, xerrors.WithStackTrace(err)
 		}
 
-		s.laztTx = c.config.LazyTx()
+		newSession.laztTx = currentClient.config.LazyTx()
 
-		return s, nil
+		return newSession, nil
 	})
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	return s, nil
+	return newSession, nil
 }
 
 func New(ctx context.Context, cc grpc.ClientConnInterface, cfg *config.Config) *Client {
@@ -577,7 +577,7 @@ func New(ctx context.Context, cc grpc.ClientConnInterface, cfg *config.Config) *
 				}
 				defer cancelCreate()
 
-				s, err := createSession(createCtx, client,
+				newSession, err := createSession(createCtx, client,
 					session.WithConn(cc),
 					session.WithDeleteTimeout(cfg.SessionDeleteTimeout()),
 					session.WithTrace(cfg.Trace()),
@@ -586,9 +586,9 @@ func New(ctx context.Context, cc grpc.ClientConnInterface, cfg *config.Config) *
 					return nil, xerrors.WithStackTrace(err)
 				}
 
-				s.laztTx = cfg.LazyTx()
+				newSession.laztTx = cfg.LazyTx()
 
-				return s, nil
+				return newSession, nil
 			}),
 		),
 	}

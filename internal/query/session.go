@@ -152,15 +152,15 @@ func (s *Session) Exec(
 }
 
 func (s *Session) Query(
-	ctx context.Context, q string, opts ...options.Execute,
+	ctx context.Context, qry string, opts ...options.Execute,
 ) (_ query.Result, finalErr error) {
 	onDone := trace.QueryOnSessionQuery(s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).Query"), s, q)
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).Query"), s, qry)
 	defer func() {
 		onDone(finalErr)
 	}()
 
-	r, err := execute(ctx, s.ID(), s.client, q, options.ExecuteSettings(opts...), withTrace(s.trace))
+	r, err := execute(ctx, s.ID(), s.client, qry, options.ExecuteSettings(opts...), withTrace(s.trace))
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}

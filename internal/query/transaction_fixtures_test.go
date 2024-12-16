@@ -9,7 +9,7 @@ import (
 )
 
 func TransactionOverGrpcMock(e fixenv.Env) *Transaction {
-	f := func() (*fixenv.GenericResult[*Transaction], error) {
+	fn := func() (*fixenv.GenericResult[*Transaction], error) {
 		return fixenv.NewGenericResult(&Transaction{
 			LazyID: func() (id tx.LazyID) {
 				id.SetTxID(fmt.Sprintf("test-transaction-id-%v", e.T().Name()))
@@ -20,5 +20,5 @@ func TransactionOverGrpcMock(e fixenv.Env) *Transaction {
 		}), nil
 	}
 
-	return fixenv.CacheResult(e, f)
+	return fixenv.CacheResult(e, fn)
 }

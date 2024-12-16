@@ -351,12 +351,12 @@ func TestResultNextResultSet(t *testing.T) {
 			},
 		}, nil)
 		stream.EXPECT().Recv().Return(nil, io.EOF)
-		r, err := newResult(ctx, stream, nil)
+		testStreamResult, err := newResult(ctx, stream, nil)
 		require.NoError(t, err)
-		defer r.Close(ctx)
+		defer testStreamResult.Close(ctx)
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 0, rs.Index())
 			{
@@ -397,13 +397,13 @@ func TestResultNextResultSet(t *testing.T) {
 		}
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 1, rs.Index())
 		}
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 2, rs.Index())
 			{
@@ -444,11 +444,11 @@ func TestResultNextResultSet(t *testing.T) {
 		}
 		{
 			t.Log("close result")
-			r.Close(context.Background())
+			testStreamResult.Close(context.Background())
 		}
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(context.Background())
+			rs, err := testStreamResult.nextResultSet(context.Background())
 			require.ErrorIs(t, err, io.EOF)
 			require.Nil(t, rs)
 			require.Equal(t, -1, rs.Index())
@@ -518,12 +518,12 @@ func TestResultNextResultSet(t *testing.T) {
 				},
 			},
 		}, nil)
-		r, err := newResult(ctx, stream, nil)
+		testStreamResult, err := newResult(ctx, stream, nil)
 		require.NoError(t, err)
-		defer r.Close(ctx)
+		defer testStreamResult.Close(ctx)
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 0, rs.Index())
 			{
@@ -539,7 +539,7 @@ func TestResultNextResultSet(t *testing.T) {
 				require.EqualValues(t, 1, rs.rowIndex)
 			}
 			t.Log("explicit interrupt stream")
-			r.closeOnce()
+			testStreamResult.closeOnce()
 			{
 				t.Log("next (row=3)")
 				_, err := rs.nextRow(context.Background())
@@ -554,7 +554,7 @@ func TestResultNextResultSet(t *testing.T) {
 		}
 		{
 			t.Log("nextResultSet")
-			_, err := r.nextResultSet(context.Background())
+			_, err := testStreamResult.nextResultSet(context.Background())
 			require.ErrorIs(t, err, io.EOF)
 		}
 	})
@@ -833,12 +833,12 @@ func TestResultNextResultSet(t *testing.T) {
 				},
 			},
 		}, nil)
-		r, err := newResult(ctx, stream, nil)
+		testStreamResult, err := newResult(ctx, stream, nil)
 		require.NoError(t, err)
-		defer r.Close(ctx)
+		defer testStreamResult.Close(ctx)
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 0, rs.Index())
 			{
@@ -879,13 +879,13 @@ func TestResultNextResultSet(t *testing.T) {
 		}
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 2, rs.Index())
 		}
 		{
 			t.Log("nextResultSet")
-			_, err := r.nextResultSet(ctx)
+			_, err := testStreamResult.nextResultSet(ctx)
 			require.ErrorIs(t, err, errWrongNextResultSetIndex)
 		}
 	})
@@ -1544,7 +1544,7 @@ func TestCloseResultOnCloseClosableResultSet(t *testing.T) {
 	}, nil)
 	stream.EXPECT().Recv().Return(nil, io.EOF)
 	var closed bool
-	r, err := newResult(ctx, stream, withTrace(&trace.Query{
+	testStreamResult, err := newResult(ctx, stream, withTrace(&trace.Query{
 		OnResultClose: func(info trace.QueryResultCloseStartInfo) func(info trace.QueryResultCloseDoneInfo) {
 			require.False(t, closed)
 			closed = true
@@ -1555,7 +1555,7 @@ func TestCloseResultOnCloseClosableResultSet(t *testing.T) {
 
 	require.NoError(t, err)
 
-	rs, err := readResultSet(ctx, r)
+	rs, err := readResultSet(ctx, testStreamResult)
 	require.NoError(t, err)
 	var (
 		uint64Value uint64
@@ -1926,9 +1926,9 @@ func TestResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -1945,7 +1945,7 @@ func TestResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.Nil(t, s)
+			require.Nil(t, queryStat)
 		})
 		t.Run("SeparatedLastPart", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(xtest.Context(t))
@@ -2649,9 +2649,9 @@ func TestResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -2668,12 +2668,12 @@ func TestResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.NotNil(t, s)
-			require.Equal(t, "123", s.QueryPlan())
-			require.Equal(t, "456", s.QueryAST())
-			require.Equal(t, time.Microsecond*100, s.TotalDuration())
-			require.Equal(t, time.Microsecond*200, s.TotalCPUTime())
-			require.Equal(t, time.Microsecond*300, s.ProcessCPUTime())
+			require.NotNil(t, queryStat)
+			require.Equal(t, "123", queryStat.QueryPlan())
+			require.Equal(t, "456", queryStat.QueryAST())
+			require.Equal(t, time.Microsecond*100, queryStat.TotalDuration())
+			require.Equal(t, time.Microsecond*200, queryStat.TotalCPUTime())
+			require.Equal(t, time.Microsecond*300, queryStat.ProcessCPUTime())
 		})
 		t.Run("EveryPart", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(xtest.Context(t))
@@ -2986,9 +2986,9 @@ func TestResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -3005,12 +3005,12 @@ func TestResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.NotNil(t, s)
-			require.Equal(t, "123", s.QueryPlan())
-			require.Equal(t, "456", s.QueryAST())
-			require.Equal(t, time.Microsecond*100, s.TotalDuration())
-			require.Equal(t, time.Microsecond*200, s.TotalCPUTime())
-			require.Equal(t, time.Microsecond*300, s.ProcessCPUTime())
+			require.NotNil(t, queryStat)
+			require.Equal(t, "123", queryStat.QueryPlan())
+			require.Equal(t, "456", queryStat.QueryAST())
+			require.Equal(t, time.Microsecond*100, queryStat.TotalDuration())
+			require.Equal(t, time.Microsecond*200, queryStat.TotalCPUTime())
+			require.Equal(t, time.Microsecond*300, queryStat.ProcessCPUTime())
 		})
 	})
 }
@@ -3358,9 +3358,9 @@ func TestMaterializedResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -3377,7 +3377,7 @@ func TestMaterializedResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.Nil(t, s)
+			require.Nil(t, queryStat)
 		})
 		t.Run("SeparatedLastPart", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(xtest.Context(t))
@@ -3719,9 +3719,9 @@ func TestMaterializedResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -3738,12 +3738,12 @@ func TestMaterializedResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.NotNil(t, s)
-			require.Equal(t, "123", s.QueryPlan())
-			require.Equal(t, "456", s.QueryAST())
-			require.Equal(t, time.Microsecond*100, s.TotalDuration())
-			require.Equal(t, time.Microsecond*200, s.TotalCPUTime())
-			require.Equal(t, time.Microsecond*300, s.ProcessCPUTime())
+			require.NotNil(t, queryStat)
+			require.Equal(t, "123", queryStat.QueryPlan())
+			require.Equal(t, "456", queryStat.QueryAST())
+			require.Equal(t, time.Microsecond*100, queryStat.TotalDuration())
+			require.Equal(t, time.Microsecond*200, queryStat.TotalCPUTime())
+			require.Equal(t, time.Microsecond*300, queryStat.ProcessCPUTime())
 		})
 		t.Run("WithLastPart", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(xtest.Context(t))
@@ -4081,9 +4081,9 @@ func TestMaterializedResultStats(t *testing.T) {
 				},
 			}, nil)
 			stream.EXPECT().Recv().Return(nil, io.EOF)
-			var s stats.QueryStats
+			var queryStat stats.QueryStats
 			result, err := newResult(ctx, stream, withStatsCallback(func(queryStats stats.QueryStats) {
-				s = queryStats
+				queryStat = queryStats
 			}))
 			require.NoError(t, err)
 			require.NotNil(t, result)
@@ -4100,12 +4100,12 @@ func TestMaterializedResultStats(t *testing.T) {
 					}
 				}
 			}
-			require.NotNil(t, s)
-			require.Equal(t, "123", s.QueryPlan())
-			require.Equal(t, "456", s.QueryAST())
-			require.Equal(t, time.Microsecond*100, s.TotalDuration())
-			require.Equal(t, time.Microsecond*200, s.TotalCPUTime())
-			require.Equal(t, time.Microsecond*300, s.ProcessCPUTime())
+			require.NotNil(t, queryStat)
+			require.Equal(t, "123", queryStat.QueryPlan())
+			require.Equal(t, "456", queryStat.QueryAST())
+			require.Equal(t, time.Microsecond*100, queryStat.TotalDuration())
+			require.Equal(t, time.Microsecond*200, queryStat.TotalCPUTime())
+			require.Equal(t, time.Microsecond*300, queryStat.ProcessCPUTime())
 		})
 		t.Run("EveryPart", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(xtest.Context(t))

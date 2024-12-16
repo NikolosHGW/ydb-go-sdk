@@ -19,21 +19,21 @@ func SessionOverGrpcMock(e fixenv.Env) *Session {
 }
 
 func QueryGrpcMock(e fixenv.Env) *MockQueryServiceClient {
-	f := func() (*fixenv.GenericResult[*MockQueryServiceClient], error) {
+	fn := func() (*fixenv.GenericResult[*MockQueryServiceClient], error) {
 		m := NewMockQueryServiceClient(MockController(e))
 
 		return fixenv.NewGenericResult(m), nil
 	}
 
-	return fixenv.CacheResult(e, f)
+	return fixenv.CacheResult(e, fn)
 }
 
 func MockController(e fixenv.Env) *gomock.Controller {
-	f := func() (*fixenv.GenericResult[*gomock.Controller], error) {
+	fn := func() (*fixenv.GenericResult[*gomock.Controller], error) {
 		mc := gomock.NewController(e.T().(gomock.TestReporter))
 
 		return fixenv.NewGenericResult(mc), nil
 	}
 
-	return fixenv.CacheResult(e, f)
+	return fixenv.CacheResult(e, fn)
 }

@@ -357,18 +357,18 @@ func TestExecute(t *testing.T) {
 		client := NewMockQueryServiceClient(ctrl)
 		client.EXPECT().ExecuteQuery(gomock.Any(), gomock.Any()).Return(stream, nil)
 		var txID string
-		r, err := execute(ctx, "123", client, "", options.ExecuteSettings(),
+		testStreamResult, err := execute(ctx, "123", client, "", options.ExecuteSettings(),
 			onTxMeta(func(txMeta *Ydb_Query.TransactionMeta) {
 				txID = txMeta.GetId()
 			}),
 		)
 		require.NoError(t, err)
-		defer r.Close(ctx)
+		defer testStreamResult.Close(ctx)
 		require.EqualValues(t, "456", txID)
-		require.EqualValues(t, -1, r.resultSetIndex)
+		require.EqualValues(t, -1, testStreamResult.resultSetIndex)
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 0, rs.index)
 			{
@@ -409,13 +409,13 @@ func TestExecute(t *testing.T) {
 		}
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 1, rs.index)
 		}
 		{
 			t.Log("nextResultSet")
-			rs, err := r.nextResultSet(ctx)
+			rs, err := testStreamResult.nextResultSet(ctx)
 			require.NoError(t, err)
 			require.EqualValues(t, 2, rs.index)
 			{
@@ -456,11 +456,11 @@ func TestExecute(t *testing.T) {
 		}
 		{
 			t.Log("close result")
-			r.Close(context.Background())
+			testStreamResult.Close(context.Background())
 		}
 		{
 			t.Log("nextResultSet")
-			_, err := r.nextResultSet(context.Background())
+			_, err := testStreamResult.nextResultSet(context.Background())
 			require.ErrorIs(t, err, io.EOF)
 		}
 	})
@@ -576,18 +576,18 @@ func TestExecute(t *testing.T) {
 			client.EXPECT().ExecuteQuery(gomock.Any(), gomock.Any()).Return(stream, nil)
 			t.Log("execute")
 			var txID string
-			r, err := execute(ctx, "123", client, "", options.ExecuteSettings(),
+			testStreamResult, err := execute(ctx, "123", client, "", options.ExecuteSettings(),
 				onTxMeta(func(txMeta *Ydb_Query.TransactionMeta) {
 					txID = txMeta.GetId()
 				}),
 			)
 			require.NoError(t, err)
-			defer r.Close(ctx)
+			defer testStreamResult.Close(ctx)
 			require.EqualValues(t, "456", txID)
-			require.EqualValues(t, -1, r.resultSetIndex)
+			require.EqualValues(t, -1, testStreamResult.resultSetIndex)
 			{
 				t.Log("nextResultSet")
-				rs, err := r.nextResultSet(ctx)
+				rs, err := testStreamResult.nextResultSet(ctx)
 				require.NoError(t, err)
 				require.EqualValues(t, 0, rs.index)
 				{
@@ -717,18 +717,18 @@ func TestExecute(t *testing.T) {
 			client.EXPECT().ExecuteQuery(gomock.Any(), gomock.Any()).Return(stream, nil)
 			t.Log("execute")
 			var txID string
-			r, err := execute(ctx, "123", client, "", options.ExecuteSettings(),
+			testStreamResult, err := execute(ctx, "123", client, "", options.ExecuteSettings(),
 				onTxMeta(func(txMeta *Ydb_Query.TransactionMeta) {
 					txID = txMeta.GetId()
 				}),
 			)
 			require.NoError(t, err)
-			defer r.Close(ctx)
+			defer testStreamResult.Close(ctx)
 			require.EqualValues(t, "456", txID)
-			require.EqualValues(t, -1, r.resultSetIndex)
+			require.EqualValues(t, -1, testStreamResult.resultSetIndex)
 			{
 				t.Log("nextResultSet")
-				rs, err := r.nextResultSet(ctx)
+				rs, err := testStreamResult.nextResultSet(ctx)
 				require.NoError(t, err)
 				require.EqualValues(t, 0, rs.index)
 				{
@@ -761,7 +761,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestExecuteQueryRequest(t *testing.T) {
-	a := allocator.New()
+	alloc := allocator.New()
 	for _, tt := range []struct {
 		name        string
 		opts        []options.Execute
@@ -1008,7 +1008,7 @@ func TestExecuteQueryRequest(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			request, callOptions, err := executeQueryRequest(a, tt.name, tt.name, options.ExecuteSettings(tt.opts...))
+			request, callOptions, err := executeQueryRequest(alloc, tt.name, tt.name, options.ExecuteSettings(tt.opts...))
 			require.NoError(t, err)
 			require.Equal(t, request.String(), tt.request.String())
 			require.Equal(t, tt.callOptions, callOptions)

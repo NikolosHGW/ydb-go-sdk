@@ -115,24 +115,24 @@ func newResult(
 	stream Ydb_Query_V1.QueryService_ExecuteQueryClient,
 	opts ...resultOption,
 ) (_ *streamResult, finalErr error) {
-	r := streamResult{
+	newStreamResult := streamResult{
 		stream:         stream,
 		closed:         make(chan struct{}),
 		resultSetIndex: -1,
 	}
-	r.closeOnce = sync.OnceFunc(func() {
-		close(r.closed)
-		r.stream = nil
+	newStreamResult.closeOnce = sync.OnceFunc(func() {
+		close(newStreamResult.closed)
+		newStreamResult.stream = nil
 	})
 
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&r)
+			opt(&newStreamResult)
 		}
 	}
 
-	if r.trace != nil {
-		onDone := trace.QueryOnResultNew(r.trace, &ctx,
+	if newStreamResult.trace != nil {
+		onDone := trace.QueryOnResultNew(newStreamResult.trace, &ctx,
 			stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.newResult"),
 		)
 		defer func() {
@@ -144,18 +144,18 @@ func newResult(
 	case <-ctx.Done():
 		return nil, xerrors.WithStackTrace(ctx.Err())
 	default:
-		part, err := r.nextPart(ctx)
+		part, err := newStreamResult.nextPart(ctx)
 		if err != nil {
 			return nil, xerrors.WithStackTrace(err)
 		}
 
-		r.lastPart = part
+		newStreamResult.lastPart = part
 
-		if r.statsCallback != nil {
-			r.statsCallback(stats.FromQueryStats(part.GetExecStats()))
+		if newStreamResult.statsCallback != nil {
+			newStreamResult.statsCallback(stats.FromQueryStats(part.GetExecStats()))
 		}
 
-		return &r, nil
+		return &newStreamResult, nil
 	}
 }
 
@@ -319,8 +319,8 @@ func (r *streamResult) NextResultSet(ctx context.Context) (_ result.Set, err err
 	return r.nextResultSet(ctx)
 }
 
-func exactlyOneRowFromResult(ctx context.Context, r result.Result) (row result.Row, err error) {
-	rs, err := r.NextResultSet(ctx)
+func exactlyOneRowFromResult(ctx context.Context, executionResult result.Result) (row result.Row, err error) {
+	rs, err := executionResult.NextResultSet(ctx)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -339,7 +339,7 @@ func exactlyOneRowFromResult(ctx context.Context, r result.Result) (row result.R
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	_, err = r.NextResultSet(ctx)
+	_, err = executionResult.NextResultSet(ctx)
 	switch {
 	case err == nil:
 		return nil, xerrors.WithStackTrace(errMoreThanOneRow)
@@ -352,9 +352,12 @@ func exactlyOneRowFromResult(ctx context.Context, r result.Result) (row result.R
 	return row, nil
 }
 
-func exactlyOneResultSetFromResult(ctx context.Context, r result.Result) (rs result.Set, err error) {
+func exactlyOneResultSetFromResult(
+	ctx context.Context,
+	executionResult result.Result,
+) (rs result.Set, err error) {
 	var rows []query.Row
-	rs, err = r.NextResultSet(ctx)
+	rs, err = executionResult.NextResultSet(ctx)
 	if err != nil {
 		if xerrors.Is(err, io.EOF) {
 			return nil, xerrors.WithStackTrace(errNoResultSets)
@@ -377,7 +380,7 @@ func exactlyOneResultSetFromResult(ctx context.Context, r result.Result) (rs res
 		rows = append(rows, row)
 	}
 
-	_, err = r.NextResultSet(ctx)
+	_, err = executionResult.NextResultSet(ctx)
 	switch {
 	case err == nil:
 		return nil, xerrors.WithStackTrace(errMoreThanOneResultSet)
