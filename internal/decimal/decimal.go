@@ -277,26 +277,26 @@ func Format(value *big.Int, precision, scale uint32) string {
 //
 // If x value does not fit in 16 bytes with given precision, it returns 16-byte
 // representation of infinity or negative infinity value accordingly to x's sign.
-func BigIntToByte(x *big.Int, precision, scale uint32) (p [16]byte) {
-	if !IsInf(x) && !IsNaN(x) && !IsErr(x) && x.CmpAbs(pow(ten, precision)) >= 0 {
-		if x.Sign() < 0 {
-			x = neginf
+func BigIntToByte(bigIntValue *big.Int, precision, scale uint32) (p [16]byte) {
+	if !IsInf(bigIntValue) && !IsNaN(bigIntValue) && !IsErr(bigIntValue) && bigIntValue.CmpAbs(pow(ten, precision)) >= 0 {
+		if bigIntValue.Sign() < 0 {
+			bigIntValue = neginf
 		} else {
-			x = inf
+			bigIntValue = inf
 		}
 	}
-	put(x, p[:])
+	put(bigIntValue, p[:])
 
 	return p
 }
 
-func put(x *big.Int, data []byte) {
-	neg := x.Sign() < 0 //nolint:ifshort
+func put(value *big.Int, data []byte) {
+	neg := value.Sign() < 0 //nolint:ifshort
 	if neg {
-		x = complement(x)
+		value = complement(value)
 	}
 	i := len(data)
-	for _, d := range x.Bits() {
+	for _, d := range value.Bits() {
 		for j := 0; j < wordSize; j++ {
 			i--
 			data[i] = byte(d)
@@ -369,15 +369,15 @@ func pow(base *big.Int, exponent uint32) *big.Int {
 	return result
 }
 
-// complement returns two's complement of x.
-// x must be negative.
-func complement(x *big.Int) *big.Int {
-	x = big.NewInt(0).Set(x)
-	not(x)
-	x.Neg(x)
-	x.Add(x, one)
+// complement returns two's complement of value.
+// value must be negative.
+func complement(value *big.Int) *big.Int {
+	value = big.NewInt(0).Set(value)
+	not(value)
+	value.Neg(value)
+	value.Add(value, one)
 
-	return x
+	return value
 }
 
 func isInf(s string) bool {

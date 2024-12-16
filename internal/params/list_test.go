@@ -427,15 +427,15 @@ func TestList(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.method, func(t *testing.T) {
-			a := allocator.New()
-			defer a.Free()
+			alloc := allocator.New()
+			defer alloc.Free()
 
 			item := Builder{}.Param("$x").BeginList().Add()
 
 			result, ok := xtest.CallMethod(item, tc.method, tc.args...)[0].(*list)
 			require.True(t, ok)
 
-			params := result.EndList().build().toYDB(a)
+			params := result.EndList().build().toYDB(alloc)
 			require.Equal(t, xtest.ToJSON(
 				map[string]*Ydb.TypedValue{
 					"$x": {

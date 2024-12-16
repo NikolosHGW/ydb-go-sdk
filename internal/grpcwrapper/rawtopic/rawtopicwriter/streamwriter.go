@@ -59,17 +59,17 @@ func (w *StreamWriter) Recv() (ServerMessage, error) {
 		return nil, xerrors.WithStackTrace(fmt.Errorf("ydb: bad status from topic server: %v", meta.Status))
 	}
 
-	switch v := grpcMsg.GetServerMessage().(type) {
+	switch vType := grpcMsg.GetServerMessage().(type) {
 	case *Ydb_Topic.StreamWriteMessage_FromServer_InitResponse:
 		var res InitResult
 		res.ServerMessageMetadata = meta
-		res.mustFromProto(v.InitResponse)
+		res.mustFromProto(vType.InitResponse)
 
 		return &res, nil
 	case *Ydb_Topic.StreamWriteMessage_FromServer_WriteResponse:
 		var res WriteResult
 		res.ServerMessageMetadata = meta
-		err = res.fromProto(v.WriteResponse)
+		err = res.fromProto(vType.WriteResponse)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +77,7 @@ func (w *StreamWriter) Recv() (ServerMessage, error) {
 		return &res, nil
 	case *Ydb_Topic.StreamWriteMessage_FromServer_UpdateTokenResponse:
 		var res UpdateTokenResponse
-		res.MustFromProto(v.UpdateTokenResponse)
+		res.MustFromProto(vType.UpdateTokenResponse)
 
 		return &res, nil
 	default:
@@ -96,9 +96,9 @@ func (w *StreamWriter) Send(rawMsg ClientMessage) (err error) {
 	}()
 
 	var protoMsg Ydb_Topic.StreamWriteMessage_FromClient
-	switch v := rawMsg.(type) {
+	switch msgType := rawMsg.(type) {
 	case *InitRequest:
-		initReqProto, initErr := v.toProto()
+		initReqProto, initErr := msgType.toProto()
 		if initErr != nil {
 			return initErr
 		}
@@ -106,7 +106,7 @@ func (w *StreamWriter) Send(rawMsg ClientMessage) (err error) {
 			InitRequest: initReqProto,
 		}
 	case *WriteRequest:
-		writeReqProto, writeErr := v.toProto()
+		writeReqProto, writeErr := msgType.toProto()
 		if writeErr != nil {
 			return writeErr
 		}
@@ -114,7 +114,7 @@ func (w *StreamWriter) Send(rawMsg ClientMessage) (err error) {
 		return sendWriteRequest(w.Stream.Send, writeReqProto)
 	case *UpdateTokenRequest:
 		protoMsg.ClientMessage = &Ydb_Topic.StreamWriteMessage_FromClient_UpdateTokenRequest{
-			UpdateTokenRequest: v.ToProto(),
+			UpdateTokenRequest: msgType.ToProto(),
 		}
 	default:
 		return xerrors.WithStackTrace(xerrors.Wrap(fmt.Errorf(

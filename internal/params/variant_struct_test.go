@@ -456,8 +456,8 @@ func TestVariantStruct(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.method, func(t *testing.T) {
-			a := allocator.New()
-			defer a.Free()
+			alloc := allocator.New()
+			defer alloc.Free()
 
 			item := Builder{}.Param("$x").BeginVariant().BeginStruct().Field("key")
 
@@ -467,7 +467,7 @@ func TestVariantStruct(t *testing.T) {
 			builder, ok := xtest.CallMethod(vs.Name("key"), tc.method, tc.itemArgs...)[0].(*variantStructBuilder)
 			require.True(t, ok)
 
-			params := builder.EndStruct().EndVariant().build().toYDB(a)
+			params := builder.EndStruct().EndVariant().build().toYDB(alloc)
 
 			require.Equal(t, xtest.ToJSON(
 				map[string]*Ydb.TypedValue{
@@ -501,8 +501,8 @@ func TestVariantStruct(t *testing.T) {
 }
 
 func TestVariantStruct_AddFields(t *testing.T) {
-	a := allocator.New()
-	defer a.Free()
+	alloc := allocator.New()
+	defer alloc.Free()
 
 	params := Builder{}.Param("$x").BeginVariant().BeginStruct().
 		AddFields([]types.StructField{
@@ -519,7 +519,7 @@ func TestVariantStruct_AddFields(t *testing.T) {
 				T:    types.Text,
 			},
 		}...).Name("key3").Text("Hello, World!").EndStruct().
-		EndVariant().build().toYDB(a)
+		EndVariant().build().toYDB(alloc)
 
 	require.Equal(t, xtest.ToJSON(
 		map[string]*Ydb.TypedValue{

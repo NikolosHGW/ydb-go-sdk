@@ -18,15 +18,15 @@ func TestParameter(t *testing.T) {
 }
 
 func TestParameters(t *testing.T) {
-	p := &Params{}
-	p.Add(
+	params := &Params{}
+	params.Add(
 		Named("x", value.TextValue("X")),
 		Named("y", value.TextValue("Y")),
 	)
-	require.Equal(t, "{\"x\":\"X\"u,\"y\":\"Y\"u}", p.String())
-	require.Equal(t, 2, p.Count())
+	require.Equal(t, "{\"x\":\"X\"u,\"y\":\"Y\"u}", params.String())
+	require.Equal(t, 2, params.Count())
 	visited := make(map[string]value.Value, 2)
-	p.Each(func(name string, v value.Value) {
+	params.Each(func(name string, v value.Value) {
 		visited[name] = v
 	})
 	require.Len(t, visited, 2)

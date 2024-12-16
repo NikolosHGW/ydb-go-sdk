@@ -455,8 +455,8 @@ func TestVariantTuple(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.method, func(t *testing.T) {
-			a := allocator.New()
-			defer a.Free()
+			alloc := allocator.New()
+			defer alloc.Free()
 
 			item := Builder{}.Param("$x").BeginVariant().BeginTuple().Types()
 
@@ -466,7 +466,7 @@ func TestVariantTuple(t *testing.T) {
 			builder, ok := xtest.CallMethod(types.Index(0), tc.method, tc.itemArgs...)[0].(*variantTupleBuilder)
 			require.True(t, ok)
 
-			params := builder.EndTuple().EndVariant().build().toYDB(a)
+			params := builder.EndTuple().EndVariant().build().toYDB(alloc)
 
 			require.Equal(t, xtest.ToJSON(
 				map[string]*Ydb.TypedValue{
@@ -496,14 +496,14 @@ func TestVariantTuple(t *testing.T) {
 }
 
 func TestVariantTuple_AddTypes(t *testing.T) {
-	a := allocator.New()
-	defer a.Free()
+	alloc := allocator.New()
+	defer alloc.Free()
 
 	params := Builder{}.Param("$x").BeginVariant().BeginTuple().
 		Types().AddTypes(types.Int64, types.Bool).
 		Index(1).
 		Bool(true).
-		EndTuple().EndVariant().build().toYDB(a)
+		EndTuple().EndVariant().build().toYDB(alloc)
 
 	require.Equal(t, xtest.ToJSON(
 		map[string]*Ydb.TypedValue{

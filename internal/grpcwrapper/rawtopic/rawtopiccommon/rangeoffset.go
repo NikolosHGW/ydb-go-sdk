@@ -15,13 +15,13 @@ type OffsetRange struct {
 	End   Offset
 }
 
-func (r *OffsetRange) FromProto(p *Ydb_Topic.OffsetsRange) error {
-	if p == nil {
+func (r *OffsetRange) FromProto(proto *Ydb_Topic.OffsetsRange) error {
+	if proto == nil {
 		return xerrors.WithStackTrace(errUnexpectedProtobufInOffsets)
 	}
 
-	r.Start.FromInt64(p.GetStart())
-	r.End.FromInt64(p.GetEnd())
+	r.Start.FromInt64(proto.GetStart())
+	r.End.FromInt64(proto.GetEnd())
 
 	return nil
 }

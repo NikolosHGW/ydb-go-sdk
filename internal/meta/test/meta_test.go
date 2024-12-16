@@ -15,7 +15,7 @@ import (
 )
 
 func TestMetaRequiredHeaders(t *testing.T) {
-	m := internal.New(
+	newMeta := internal.New(
 		"database",
 		credentials.NewAccessTokenCredentials("token"),
 		&trace.Driver{},
@@ -29,7 +29,7 @@ func TestMetaRequiredHeaders(t *testing.T) {
 
 	ctx = metadata.AppendToOutgoingContext(ctx, "some-user-header", "some-user-value")
 
-	ctx, err := m.Context(ctx)
+	ctx, err := newMeta.Context(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

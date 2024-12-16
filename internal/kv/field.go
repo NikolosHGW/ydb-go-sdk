@@ -378,18 +378,18 @@ func Version() KeyValue {
 type Endpoints []trace.EndpointInfo
 
 func (ee Endpoints) String() string {
-	b := xstring.Buffer()
-	defer b.Free()
-	b.WriteByte('[')
+	buf := xstring.Buffer()
+	defer buf.Free()
+	buf.WriteByte('[')
 	for i, e := range ee {
 		if i != 0 {
-			b.WriteByte(',')
+			buf.WriteByte(',')
 		}
-		b.WriteString(e.String())
+		buf.WriteString(e.String())
 	}
-	b.WriteByte(']')
+	buf.WriteByte(']')
 
-	return b.String()
+	return buf.String()
 }
 
 type Metadata map[string][]string

@@ -68,22 +68,22 @@ func Discover(
 
 	location = result.GetSelfLocation()
 	endpoints = make([]endpoint.Endpoint, 0, len(result.GetEndpoints()))
-	for _, e := range result.GetEndpoints() {
-		if e.GetSsl() == config.Secure() {
+	for _, currentEndpoint := range result.GetEndpoints() {
+		if currentEndpoint.GetSsl() == config.Secure() {
 			endpoints = append(endpoints, endpoint.New(
 				net.JoinHostPort(
-					config.MutateAddress(e.GetAddress()),
-					strconv.Itoa(int(e.GetPort())),
+					config.MutateAddress(currentEndpoint.GetAddress()),
+					strconv.Itoa(int(currentEndpoint.GetPort())),
 				),
-				endpoint.WithLocation(e.GetLocation()),
-				endpoint.WithID(e.GetNodeId()),
-				endpoint.WithLoadFactor(e.GetLoadFactor()),
-				endpoint.WithLocalDC(e.GetLocation() == location),
-				endpoint.WithServices(e.GetService()),
+				endpoint.WithLocation(currentEndpoint.GetLocation()),
+				endpoint.WithID(currentEndpoint.GetNodeId()),
+				endpoint.WithLoadFactor(currentEndpoint.GetLoadFactor()),
+				endpoint.WithLocalDC(currentEndpoint.GetLocation() == location),
+				endpoint.WithServices(currentEndpoint.GetService()),
 				endpoint.WithLastUpdated(config.Clock().Now()),
-				endpoint.WithIPV4(e.GetIpV4()),
-				endpoint.WithIPV6(e.GetIpV6()),
-				endpoint.WithSslTargetNameOverride(e.GetSslTargetNameOverride()),
+				endpoint.WithIPV4(currentEndpoint.GetIpV4()),
+				endpoint.WithIPV6(currentEndpoint.GetIpV6()),
+				endpoint.WithSslTargetNameOverride(currentEndpoint.GetSslTargetNameOverride()),
 			))
 		}
 	}

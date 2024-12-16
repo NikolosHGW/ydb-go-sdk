@@ -427,15 +427,15 @@ func TestOptional(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.method, func(t *testing.T) {
-			a := allocator.New()
-			defer a.Free()
+			alloc := allocator.New()
+			defer alloc.Free()
 
 			item := Builder{}.Param("$x").BeginOptional()
 
 			result, ok := xtest.CallMethod(item, tc.method, tc.args...)[0].(*optionalBuilder)
 			require.True(t, ok)
 
-			params := result.EndOptional().build().toYDB(a)
+			params := result.EndOptional().build().toYDB(alloc)
 			require.Equal(t, xtest.ToJSON(
 				map[string]*Ydb.TypedValue{
 					"$x": {

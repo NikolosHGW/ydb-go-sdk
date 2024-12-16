@@ -51,17 +51,17 @@ func (s StreamReader) Recv() (ServerMessage, error) {
 		return nil, xerrors.WithStackTrace(fmt.Errorf("ydb: bad status from topic server: %v", meta.Status))
 	}
 
-	switch m := grpcMess.GetServerMessage().(type) {
+	switch mType := grpcMess.GetServerMessage().(type) {
 	case *Ydb_Topic.StreamReadMessage_FromServer_InitResponse:
 		resp := &InitResponse{}
 		resp.ServerMessageMetadata = meta
-		resp.fromProto(m.InitResponse)
+		resp.fromProto(mType.InitResponse)
 
 		return resp, nil
 	case *Ydb_Topic.StreamReadMessage_FromServer_ReadResponse:
 		resp := &ReadResponse{}
 		resp.ServerMessageMetadata = meta
-		if err = resp.fromProto(m.ReadResponse); err != nil {
+		if err = resp.fromProto(mType.ReadResponse); err != nil {
 			return nil, err
 		}
 
@@ -69,7 +69,7 @@ func (s StreamReader) Recv() (ServerMessage, error) {
 	case *Ydb_Topic.StreamReadMessage_FromServer_StartPartitionSessionRequest:
 		resp := &StartPartitionSessionRequest{}
 		resp.ServerMessageMetadata = meta
-		if err = resp.fromProto(m.StartPartitionSessionRequest); err != nil {
+		if err = resp.fromProto(mType.StartPartitionSessionRequest); err != nil {
 			return nil, err
 		}
 
@@ -77,7 +77,7 @@ func (s StreamReader) Recv() (ServerMessage, error) {
 	case *Ydb_Topic.StreamReadMessage_FromServer_StopPartitionSessionRequest:
 		req := &StopPartitionSessionRequest{}
 		req.ServerMessageMetadata = meta
-		if err = req.fromProto(m.StopPartitionSessionRequest); err != nil {
+		if err = req.fromProto(mType.StopPartitionSessionRequest); err != nil {
 			return nil, err
 		}
 
@@ -85,7 +85,7 @@ func (s StreamReader) Recv() (ServerMessage, error) {
 	case *Ydb_Topic.StreamReadMessage_FromServer_CommitOffsetResponse:
 		resp := &CommitOffsetResponse{}
 		resp.ServerMessageMetadata = meta
-		if err = resp.fromProto(m.CommitOffsetResponse); err != nil {
+		if err = resp.fromProto(mType.CommitOffsetResponse); err != nil {
 			return nil, err
 		}
 
@@ -93,7 +93,7 @@ func (s StreamReader) Recv() (ServerMessage, error) {
 	case *Ydb_Topic.StreamReadMessage_FromServer_PartitionSessionStatusResponse:
 		resp := &PartitionSessionStatusResponse{}
 		resp.ServerMessageMetadata = meta
-		if err = resp.fromProto(m.PartitionSessionStatusResponse); err != nil {
+		if err = resp.fromProto(mType.PartitionSessionStatusResponse); err != nil {
 			return nil, err
 		}
 
@@ -101,7 +101,7 @@ func (s StreamReader) Recv() (ServerMessage, error) {
 	case *Ydb_Topic.StreamReadMessage_FromServer_UpdateTokenResponse:
 		resp := &UpdateTokenResponse{}
 		resp.ServerMessageMetadata = meta
-		resp.MustFromProto(m.UpdateTokenResponse)
+		resp.MustFromProto(mType.UpdateTokenResponse)
 
 		return resp, nil
 	default:
@@ -117,23 +117,23 @@ func (s StreamReader) Send(msg ClientMessage) (err error) {
 	defer func() {
 		err = xerrors.Transport(err)
 	}()
-	switch m := msg.(type) {
+	switch mType := msg.(type) {
 	case *InitRequest:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
-			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_InitRequest{InitRequest: m.toProto()},
+			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_InitRequest{InitRequest: mType.toProto()},
 		}
 
 		return s.Stream.Send(grpcMess)
 	case *ReadRequest:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
-			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_ReadRequest{ReadRequest: m.toProto()},
+			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_ReadRequest{ReadRequest: mType.toProto()},
 		}
 
 		return s.Stream.Send(grpcMess)
 	case *StartPartitionSessionResponse:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
 			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_StartPartitionSessionResponse{
-				StartPartitionSessionResponse: m.toProto(),
+				StartPartitionSessionResponse: mType.toProto(),
 			},
 		}
 
@@ -141,7 +141,7 @@ func (s StreamReader) Send(msg ClientMessage) (err error) {
 	case *StopPartitionSessionResponse:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
 			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_StopPartitionSessionResponse{
-				StopPartitionSessionResponse: m.toProto(),
+				StopPartitionSessionResponse: mType.toProto(),
 			},
 		}
 
@@ -149,7 +149,7 @@ func (s StreamReader) Send(msg ClientMessage) (err error) {
 	case *CommitOffsetRequest:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
 			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_CommitOffsetRequest{
-				CommitOffsetRequest: m.toProto(),
+				CommitOffsetRequest: mType.toProto(),
 			},
 		}
 
@@ -157,7 +157,7 @@ func (s StreamReader) Send(msg ClientMessage) (err error) {
 	case *PartitionSessionStatusRequest:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
 			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_PartitionSessionStatusRequest{
-				PartitionSessionStatusRequest: m.toProto(),
+				PartitionSessionStatusRequest: mType.toProto(),
 			},
 		}
 
@@ -165,7 +165,7 @@ func (s StreamReader) Send(msg ClientMessage) (err error) {
 	case *UpdateTokenRequest:
 		grpcMess := &Ydb_Topic.StreamReadMessage_FromClient{
 			ClientMessage: &Ydb_Topic.StreamReadMessage_FromClient_UpdateTokenRequest{
-				UpdateTokenRequest: m.ToProto(),
+				UpdateTokenRequest: mType.ToProto(),
 			},
 		}
 

@@ -24,7 +24,7 @@ func New(
 	trace *trace.Driver,
 	opts ...Option,
 ) *Meta {
-	m := &Meta{
+	newMeta := &Meta{
 		pid:         strconv.Itoa(pid),
 		trace:       trace,
 		credentials: credentials,
@@ -32,11 +32,11 @@ func New(
 	}
 	for _, opt := range opts {
 		if opt != nil {
-			opt(m)
+			opt(newMeta)
 		}
 	}
 
-	return m
+	return newMeta
 }
 
 type Option func(m *Meta)
@@ -60,15 +60,15 @@ func AllowOption(feature string) Option {
 }
 
 func ForbidOption(feature string) Option {
-	return func(m *Meta) {
-		n := 0
-		for _, capability := range m.capabilities {
+	return func(currentMeta *Meta) {
+		index := 0
+		for _, capability := range currentMeta.capabilities {
 			if capability != feature {
-				m.capabilities[n] = capability
-				n++
+				currentMeta.capabilities[index] = capability
+				index++
 			}
 		}
-		m.capabilities = m.capabilities[:n]
+		currentMeta.capabilities = currentMeta.capabilities[:index]
 	}
 }
 

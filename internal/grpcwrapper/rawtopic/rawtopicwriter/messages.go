@@ -71,16 +71,16 @@ func NewPartitioningPartitionID(partitionID int64) Partitioning {
 	}
 }
 
-func (p *Partitioning) setToProtoInitRequest(r *Ydb_Topic.StreamWriteMessage_InitRequest) error {
+func (p *Partitioning) setToProtoInitRequest(grpcRequest *Ydb_Topic.StreamWriteMessage_InitRequest) error {
 	switch p.Type {
 	case PartitioningUndefined:
-		r.Partitioning = nil
+		grpcRequest.Partitioning = nil
 	case PartitioningMessageGroupID:
-		r.Partitioning = &Ydb_Topic.StreamWriteMessage_InitRequest_MessageGroupId{
+		grpcRequest.Partitioning = &Ydb_Topic.StreamWriteMessage_InitRequest_MessageGroupId{
 			MessageGroupId: p.MessageGroupID,
 		}
 	case PartitioningPartitionID:
-		r.Partitioning = &Ydb_Topic.StreamWriteMessage_InitRequest_PartitionId{
+		grpcRequest.Partitioning = &Ydb_Topic.StreamWriteMessage_InitRequest_PartitionId{
 			PartitionId: p.PartitionID,
 		}
 	default:
@@ -93,16 +93,16 @@ func (p *Partitioning) setToProtoInitRequest(r *Ydb_Topic.StreamWriteMessage_Ini
 	return nil
 }
 
-func (p *Partitioning) setToProtoMessage(m *Ydb_Topic.StreamWriteMessage_WriteRequest_MessageData) error {
+func (p *Partitioning) setToProtoMessage(protoMsgData *Ydb_Topic.StreamWriteMessage_WriteRequest_MessageData) error {
 	switch p.Type {
 	case PartitioningUndefined:
-		m.Partitioning = nil
+		protoMsgData.Partitioning = nil
 	case PartitioningMessageGroupID:
-		m.Partitioning = &Ydb_Topic.StreamWriteMessage_WriteRequest_MessageData_MessageGroupId{
+		protoMsgData.Partitioning = &Ydb_Topic.StreamWriteMessage_WriteRequest_MessageData_MessageGroupId{
 			MessageGroupId: p.MessageGroupID,
 		}
 	case PartitioningPartitionID:
-		m.Partitioning = &Ydb_Topic.StreamWriteMessage_WriteRequest_MessageData_PartitionId{
+		protoMsgData.Partitioning = &Ydb_Topic.StreamWriteMessage_WriteRequest_MessageData_PartitionId{
 			PartitionId: p.PartitionID,
 		}
 	default:
@@ -293,15 +293,15 @@ type MessageWriteStatus struct {
 }
 
 func (s *MessageWriteStatus) fromProto(status interface{}) error {
-	switch v := status.(type) {
+	switch valueType := status.(type) {
 	case *Ydb_Topic.StreamWriteMessage_WriteResponse_WriteAck_Written_:
 		s.Type = WriteStatusTypeWritten
-		s.WrittenOffset = v.Written.GetOffset()
+		s.WrittenOffset = valueType.Written.GetOffset()
 
 		return nil
 	case *Ydb_Topic.StreamWriteMessage_WriteResponse_WriteAck_Skipped_:
 		s.Type = WriteStatusTypeSkipped
-		s.SkippedReason = WriteStatusSkipReason(v.Skipped.GetReason())
+		s.SkippedReason = WriteStatusSkipReason(valueType.Skipped.GetReason())
 
 		return nil
 
@@ -311,7 +311,7 @@ func (s *MessageWriteStatus) fromProto(status interface{}) error {
 		return nil
 
 	default:
-		return xerrors.WithStackTrace(xerrors.Wrap(fmt.Errorf("ydb: unexpected write status type: %v", reflect.TypeOf(v))))
+		return xerrors.WithStackTrace(xerrors.Wrap(fmt.Errorf("ydb: unexpected write status type: %v", reflect.TypeOf(valueType))))
 	}
 }
 

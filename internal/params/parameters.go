@@ -67,26 +67,26 @@ func (p *Params) String() string {
 	return buffer.String()
 }
 
-func (p *Params) ToYDB(a *allocator.Allocator) (map[string]*Ydb.TypedValue, error) {
+func (p *Params) ToYDB(alloc *allocator.Allocator) (map[string]*Ydb.TypedValue, error) {
 	if p == nil {
 		return nil, nil //nolint:nilnil
 	}
 
 	parameters := make(map[string]*Ydb.TypedValue, len(*p))
 	for _, param := range *p {
-		parameters[param.name] = value.ToYDB(param.value, a)
+		parameters[param.name] = value.ToYDB(param.value, alloc)
 	}
 
 	return parameters, nil
 }
 
-func (p *Params) toYDB(a *allocator.Allocator) map[string]*Ydb.TypedValue {
+func (p *Params) toYDB(alloc *allocator.Allocator) map[string]*Ydb.TypedValue {
 	if p == nil {
 		return nil
 	}
 	parameters := make(map[string]*Ydb.TypedValue, len(*p))
 	for _, param := range *p {
-		parameters[param.name] = value.ToYDB(param.value, a)
+		parameters[param.name] = value.ToYDB(param.value, alloc)
 	}
 
 	return parameters
