@@ -264,8 +264,8 @@ func doTx(
 	txSettings tx.Settings,
 	opts ...retry.Option,
 ) (finalErr error) {
-	err := do(ctx, pool, func(ctx context.Context, s *Session) (opErr error) {
-		tx, err := s.Begin(ctx, txSettings)
+	err := do(ctx, pool, func(ctx context.Context, currentSession *Session) (opErr error) {
+		tx, err := currentSession.Begin(ctx, txSettings)
 		if err != nil {
 			return xerrors.WithStackTrace(err)
 		}
@@ -274,7 +274,7 @@ func doTx(
 			_ = tx.Rollback(ctx)
 
 			if opErr != nil {
-				s.SetStatus(session.StatusError)
+				currentSession.SetStatus(session.StatusError)
 			}
 		}()
 
@@ -411,19 +411,23 @@ func clientQuery(ctx context.Context, pool sessionPool, q string, opts ...option
 	return r, nil
 }
 
-func (c *Client) Query(ctx context.Context, q string, opts ...options.Execute) (r query.Result, err error) {
+func (c *Client) Query(
+	ctx context.Context,
+	executionResult string,
+	opts ...options.Execute,
+) (r query.Result, err error) {
 	ctx, cancel := xcontext.WithDone(ctx, c.done)
 	defer cancel()
 
 	onDone := trace.QueryOnQuery(c.config.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Client).Query"),
-		q,
+		executionResult,
 	)
 	defer func() {
 		onDone(err)
 	}()
 
-	r, err = clientQuery(ctx, c.pool, q, opts...)
+	r, err = clientQuery(ctx, c.pool, executionResult, opts...)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}

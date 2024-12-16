@@ -190,11 +190,15 @@ func (tx *Transaction) txControl() *queryTx.Control {
 	)
 }
 
-func (tx *Transaction) Exec(ctx context.Context, q string, opts ...options.Execute) (
+func (tx *Transaction) Exec(
+	ctx context.Context,
+	executionResult string,
+	opts ...options.Execute,
+) (
 	finalErr error,
 ) {
 	onDone := trace.QueryOnTxExec(tx.s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Transaction).Exec"), tx.s, tx, q)
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Transaction).Exec"), tx.s, tx, executionResult)
 	defer func() {
 		onDone(finalErr)
 	}()
@@ -229,7 +233,7 @@ func (tx *Transaction) Exec(ctx context.Context, q string, opts ...options.Execu
 		)
 	}
 
-	r, err := execute(ctx, tx.s.ID(), tx.s.client, q, settings, resultOpts...)
+	r, err := execute(ctx, tx.s.ID(), tx.s.client, executionResult, settings, resultOpts...)
 	if err != nil {
 		return xerrors.WithStackTrace(err)
 	}

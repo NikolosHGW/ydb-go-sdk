@@ -28,15 +28,15 @@ type (
 )
 
 func (s *Session) QueryResultSet(
-	ctx context.Context, q string, opts ...options.Execute,
+	ctx context.Context, executionResult string, opts ...options.Execute,
 ) (rs result.ClosableResultSet, finalErr error) {
 	onDone := trace.QueryOnSessionQueryResultSet(s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).QueryResultSet"), s, q)
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).QueryResultSet"), s, executionResult)
 	defer func() {
 		onDone(finalErr)
 	}()
 
-	r, err := execute(ctx, s.ID(), s.client, q, options.ExecuteSettings(opts...), withTrace(s.trace))
+	r, err := execute(ctx, s.ID(), s.client, executionResult, options.ExecuteSettings(opts...), withTrace(s.trace))
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -65,14 +65,18 @@ func (s *Session) queryRow(
 	return row, nil
 }
 
-func (s *Session) QueryRow(ctx context.Context, q string, opts ...options.Execute) (_ query.Row, finalErr error) {
+func (s *Session) QueryRow(
+	ctx context.Context,
+	executionResult string,
+	opts ...options.Execute,
+) (_ query.Row, finalErr error) {
 	onDone := trace.QueryOnSessionQueryRow(s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).QueryRow"), s, q)
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).QueryRow"), s, executionResult)
 	defer func() {
 		onDone(finalErr)
 	}()
 
-	row, err := s.queryRow(ctx, q, options.ExecuteSettings(opts...), withTrace(s.trace))
+	row, err := s.queryRow(ctx, executionResult, options.ExecuteSettings(opts...), withTrace(s.trace))
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -130,15 +134,17 @@ func (s *Session) Begin(
 }
 
 func (s *Session) Exec(
-	ctx context.Context, q string, opts ...options.Execute,
+	ctx context.Context,
+	executionResult string,
+	opts ...options.Execute,
 ) (finalErr error) {
 	onDone := trace.QueryOnSessionExec(s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).Exec"), s, q)
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).Exec"), s, executionResult)
 	defer func() {
 		onDone(finalErr)
 	}()
 
-	r, err := execute(ctx, s.ID(), s.client, q, options.ExecuteSettings(opts...), withTrace(s.trace))
+	r, err := execute(ctx, s.ID(), s.client, executionResult, options.ExecuteSettings(opts...), withTrace(s.trace))
 	if err != nil {
 		return xerrors.WithStackTrace(err)
 	}

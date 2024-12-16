@@ -41,12 +41,12 @@ type executeScriptConfig interface {
 	OperationParams() *Ydb_Operations.OperationParams
 }
 
-func executeQueryScriptRequest(a *allocator.Allocator, q string, cfg executeScriptConfig) (
+func executeQueryScriptRequest(alloc *allocator.Allocator, q string, cfg executeScriptConfig) (
 	*Ydb_Query.ExecuteScriptRequest,
 	[]grpc.CallOption,
 	error,
 ) {
-	params, err := cfg.Params().ToYDB(a)
+	params, err := cfg.Params().ToYDB(alloc)
 	if err != nil {
 		return nil, nil, xerrors.WithStackTrace(err)
 	}
@@ -60,7 +60,7 @@ func executeQueryScriptRequest(a *allocator.Allocator, q string, cfg executeScri
 			ReportCostInfo:   0,
 		},
 		ExecMode:      Ydb_Query.ExecMode(cfg.ExecMode()),
-		ScriptContent: queryQueryContent(a, Ydb_Query.Syntax(cfg.Syntax()), q),
+		ScriptContent: queryQueryContent(alloc, Ydb_Query.Syntax(cfg.Syntax()), q),
 		Parameters:    params,
 		StatsMode:     Ydb_Query.StatsMode(cfg.StatsMode()),
 		ResultsTtl:    durationpb.New(cfg.ResultsTTL()),
@@ -70,7 +70,12 @@ func executeQueryScriptRequest(a *allocator.Allocator, q string, cfg executeScri
 	return request, cfg.CallOptions(), nil
 }
 
-func executeQueryRequest(a *allocator.Allocator, sessionID, q string, cfg executeSettings) (
+func executeQueryRequest(
+	a *allocator.Allocator,
+	sessionID,
+	executionResult string,
+	cfg executeSettings,
+) (
 	*Ydb_Query.ExecuteQueryRequest,
 	[]grpc.CallOption,
 	error,
@@ -85,7 +90,7 @@ func executeQueryRequest(a *allocator.Allocator, sessionID, q string, cfg execut
 	request.SessionId = sessionID
 	request.ExecMode = Ydb_Query.ExecMode(cfg.ExecMode())
 	request.TxControl = cfg.TxControl().ToYDB(a)
-	request.Query = queryFromText(a, q, Ydb_Query.Syntax(cfg.Syntax()))
+	request.Query = queryFromText(a, executionResult, Ydb_Query.Syntax(cfg.Syntax()))
 	request.Parameters = params
 	request.StatsMode = Ydb_Query.StatsMode(cfg.StatsMode())
 	request.ConcurrentResultSets = false
@@ -113,7 +118,7 @@ func queryFromText(
 }
 
 func execute(
-	ctx context.Context, sessionID string, c Ydb_Query_V1.QueryServiceClient,
+	ctx context.Context, sessionID string, protoClient Ydb_Query_V1.QueryServiceClient,
 	q string, settings executeSettings, opts ...resultOption,
 ) (
 	_ *streamResult, finalErr error,
@@ -128,7 +133,7 @@ func execute(
 
 	executeCtx := xcontext.ValueOnly(ctx)
 
-	stream, err := c.ExecuteQuery(executeCtx, request, callOptions...)
+	stream, err := protoClient.ExecuteQuery(executeCtx, request, callOptions...)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -158,8 +163,11 @@ func readAll(ctx context.Context, currentStreamResult *streamResult) error {
 	}
 }
 
-func readResultSet(ctx context.Context, r *streamResult) (_ *resultSetWithClose, finalErr error) {
-	rs, err := r.nextResultSet(ctx)
+func readResultSet(
+	ctx context.Context,
+	currentStreamResult *streamResult,
+) (_ *resultSetWithClose, finalErr error) {
+	rs, err := currentStreamResult.nextResultSet(ctx)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -167,7 +175,7 @@ func readResultSet(ctx context.Context, r *streamResult) (_ *resultSetWithClose,
 
 	return &resultSetWithClose{
 		resultSet: rs,
-		close:     r.Close,
+		close:     currentStreamResult.Close,
 	}, nil
 }
 

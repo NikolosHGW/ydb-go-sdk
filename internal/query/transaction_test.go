@@ -251,8 +251,8 @@ func TestTxOnCompleted(t *testing.T) {
 		})
 	})
 	t.Run("OnQueryWithoutTxSuccess", func(t *testing.T) {
-		xtest.TestManyTimes(t, func(t testing.TB) {
-			envt := fixenv.New(t)
+		xtest.TestManyTimes(t, func(tb testing.TB) {
+			envt := fixenv.New(tb)
 
 			responseStream := NewMockQueryService_ExecuteQueryClient(MockController(envt))
 			responseStream.EXPECT().Recv().Return(&Ydb_Query.ExecuteQueryResponsePart{
@@ -273,10 +273,10 @@ func TestTxOnCompleted(t *testing.T) {
 			})
 
 			res, err := tx.Query(sf.Context(envt), "")
-			require.NoError(t, err)
+			require.NoError(tb, err)
 			_ = res.Close(sf.Context(envt))
 			time.Sleep(time.Millisecond) // time for reaction for closing channel
-			require.Empty(t, completed)
+			require.Empty(tb, completed)
 		})
 	})
 	t.Run("OnExecWithTxSuccess", func(t *testing.T) {
@@ -310,8 +310,8 @@ func TestTxOnCompleted(t *testing.T) {
 		})
 	})
 	t.Run("OnQueryWithTxSuccess", func(t *testing.T) {
-		xtest.TestManyTimes(t, func(t testing.TB) {
-			envt := fixenv.New(t)
+		xtest.TestManyTimes(t, func(tb testing.TB) {
+			envt := fixenv.New(tb)
 
 			responseStream := NewMockQueryService_ExecuteQueryClient(MockController(envt))
 			responseStream.EXPECT().Recv().Return(&Ydb_Query.ExecuteQueryResponsePart{
@@ -333,16 +333,16 @@ func TestTxOnCompleted(t *testing.T) {
 
 			res, err := tx.Query(sf.Context(envt), "", options.WithCommit())
 			_ = res.Close(sf.Context(envt))
-			require.NoError(t, err)
-			xtest.SpinWaitCondition(t, &completedMutex, func() bool {
+			require.NoError(tb, err)
+			xtest.SpinWaitCondition(tb, &completedMutex, func() bool {
 				return len(completed) != 0
 			})
-			require.Equal(t, []error{nil}, completed)
+			require.Equal(tb, []error{nil}, completed)
 		})
 	})
 	t.Run("OnQueryWithTxSuccessWithTwoResultSet", func(t *testing.T) {
-		xtest.TestManyTimes(t, func(t testing.TB) {
-			envt := fixenv.New(t)
+		xtest.TestManyTimes(t, func(tb testing.TB) {
+			envt := fixenv.New(tb)
 
 			responseStream := NewMockQueryService_ExecuteQueryClient(MockController(envt))
 			responseStream.EXPECT().Recv().Return(&Ydb_Query.ExecuteQueryResponsePart{
@@ -369,27 +369,27 @@ func TestTxOnCompleted(t *testing.T) {
 			})
 
 			res, err := tx.Query(sf.Context(envt), "", options.WithCommit())
-			require.NoError(t, err)
+			require.NoError(tb, err)
 
 			// time for event happened if is
 			time.Sleep(time.Millisecond)
-			require.Empty(t, completed)
+			require.Empty(tb, completed)
 
 			_, err = res.NextResultSet(sf.Context(envt))
-			require.NoError(t, err)
+			require.NoError(tb, err)
 			// time for event happened if is
 			time.Sleep(time.Millisecond)
-			require.Empty(t, completed)
+			require.Empty(tb, completed)
 
 			_, err = res.NextResultSet(sf.Context(envt))
-			require.NoError(t, err)
+			require.NoError(tb, err)
 
 			_ = res.Close(sf.Context(envt))
-			require.NoError(t, err)
-			xtest.SpinWaitCondition(t, &completedMutex, func() bool {
+			require.NoError(tb, err)
+			xtest.SpinWaitCondition(tb, &completedMutex, func() bool {
 				return len(completed) != 0
 			})
-			require.Equal(t, []error{nil}, completed)
+			require.Equal(tb, []error{nil}, completed)
 		})
 	})
 	t.Run("OnExecuteFailedOnInitResponse", func(t *testing.T) {
@@ -420,8 +420,8 @@ func TestTxOnCompleted(t *testing.T) {
 	t.Run("OnExecuteFailedInResponsePart", func(t *testing.T) {
 		for _, commit := range []bool{true, false} {
 			t.Run(fmt.Sprint("commit:", commit), func(t *testing.T) {
-				xtest.TestManyTimes(t, func(t testing.TB) {
-					envt := fixenv.New(t)
+				xtest.TestManyTimes(t, func(tb testing.TB) {
+					envt := fixenv.New(tb)
 
 					errorReturned := false
 					responseStream := NewMockQueryService_ExecuteQueryClient(MockController(envt))
@@ -441,10 +441,10 @@ func TestTxOnCompleted(t *testing.T) {
 					})
 
 					err := tx.Exec(sf.Context(envt), "", query.WithCommit())
-					require.True(t, errorReturned)
-					require.True(t, xerrors.IsOperationError(err, Ydb.StatusIds_BAD_SESSION))
-					require.Error(t, transactionResult)
-					require.True(t, xerrors.IsOperationError(transactionResult, Ydb.StatusIds_BAD_SESSION))
+					require.True(tb, errorReturned)
+					require.True(tb, xerrors.IsOperationError(err, Ydb.StatusIds_BAD_SESSION))
+					require.Error(tb, transactionResult)
+					require.True(tb, xerrors.IsOperationError(transactionResult, Ydb.StatusIds_BAD_SESSION))
 				})
 			})
 		}
