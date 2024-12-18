@@ -394,9 +394,9 @@ func TestClient(t *testing.T) {
 		t.Run("TxLeak", func(t *testing.T) {
 			t.Run("OnExec", func(t *testing.T) {
 				t.Run("WithoutCommit", func(t *testing.T) {
-					xtest.TestManyTimes(t, func(t testing.TB) {
+					xtest.TestManyTimes(t, func(tb testing.TB) {
 						txInFlight := 0
-						ctrl := gomock.NewController(t)
+						ctrl := gomock.NewController(tb)
 						err := doTx(ctx, testPool(ctx, func(ctx context.Context) (*Session, error) {
 							client := NewMockQueryServiceClient(ctrl)
 							client.EXPECT().ExecuteQuery(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -442,8 +442,8 @@ func TestClient(t *testing.T) {
 						}), func(ctx context.Context, tx query.TxActor) error {
 							return tx.Exec(ctx, "")
 						}, tx.NewSettings(tx.WithSerializableReadWrite()))
-						require.NoError(t, err)
-						require.Zero(t, txInFlight)
+						require.NoError(tb, err)
+						require.Zero(tb, txInFlight)
 					})
 				})
 				t.Run("WithCommit", func(t *testing.T) {
@@ -591,8 +591,8 @@ func TestClient(t *testing.T) {
 					})
 				})
 				t.Run("WithCommit", func(t *testing.T) {
-					xtest.TestManyTimes(t, func(t testing.TB) {
-						ctrl := gomock.NewController(t)
+					xtest.TestManyTimes(t, func(tb testing.TB) {
+						ctrl := gomock.NewController(tb)
 						txInFlight := 0
 						err := doTx(ctx, testPool(ctx, func(ctx context.Context) (*Session, error) {
 							client := NewMockQueryServiceClient(ctrl)
@@ -613,7 +613,7 @@ func TestClient(t *testing.T) {
 												func(ctx context.Context, request *Ydb_Query.ExecuteQueryRequest, option ...grpc.CallOption) (
 													Ydb_Query_V1.QueryService_ExecuteQueryClient, error,
 												) {
-													require.True(t, request.GetTxControl().GetCommitTx())
+													require.True(tb, request.GetTxControl().GetCommitTx())
 
 													if rand.Int31n(100) < 50 {
 														client.EXPECT().RollbackTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -668,7 +668,7 @@ func TestClient(t *testing.T) {
 
 							return tx.Exec(ctx, "", options.WithCommit())
 						}, tx.NewSettings(tx.WithSerializableReadWrite()))
-						require.NoError(t, err)
+						require.NoError(tb, err)
 					})
 				})
 			})

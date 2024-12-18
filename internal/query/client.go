@@ -358,19 +358,19 @@ func clientExec(ctx context.Context, pool sessionPool, q string, opts ...options
 	return nil
 }
 
-func (c *Client) Exec(ctx context.Context, q string, opts ...options.Execute) (finalErr error) {
+func (c *Client) Exec(ctx context.Context, queryString string, opts ...options.Execute) (finalErr error) {
 	ctx, cancel := xcontext.WithDone(ctx, c.done)
 	defer cancel()
 
 	onDone := trace.QueryOnExec(c.config.Trace(), &ctx,
 		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Client).Exec"),
-		q,
+		queryString,
 	)
 	defer func() {
 		onDone(finalErr)
 	}()
 
-	err := clientExec(ctx, c.pool, q, opts...)
+	err := clientExec(ctx, c.pool, queryString, opts...)
 	if err != nil {
 		return xerrors.WithStackTrace(err)
 	}

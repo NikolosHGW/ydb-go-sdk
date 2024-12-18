@@ -128,10 +128,10 @@ func (tx *Transaction) QueryResultSet(
 }
 
 func (tx *Transaction) QueryRow(
-	ctx context.Context, q string, opts ...options.Execute,
+	ctx context.Context, queryString string, opts ...options.Execute,
 ) (row query.Row, finalErr error) {
 	onDone := trace.QueryOnTxQueryRow(tx.s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Transaction).QueryRow"), tx, q)
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Transaction).QueryRow"), tx, queryString)
 	defer func() {
 		onDone(finalErr)
 	}()
@@ -163,7 +163,7 @@ func (tx *Transaction) QueryRow(
 			}),
 		)
 	}
-	r, err := execute(ctx, tx.s.ID(), tx.s.client, q, settings, resultOpts...)
+	r, err := execute(ctx, tx.s.ID(), tx.s.client, queryString, settings, resultOpts...)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -197,8 +197,14 @@ func (tx *Transaction) Exec(
 ) (
 	finalErr error,
 ) {
-	onDone := trace.QueryOnTxExec(tx.s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Transaction).Exec"), tx.s, tx, executionResult)
+	onDone := trace.QueryOnTxExec(
+		tx.s.trace,
+		&ctx,
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Transaction).Exec"),
+		tx.s,
+		tx,
+		executionResult,
+	)
 	defer func() {
 		onDone(finalErr)
 	}()

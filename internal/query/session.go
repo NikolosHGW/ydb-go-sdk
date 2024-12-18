@@ -30,8 +30,13 @@ type (
 func (s *Session) QueryResultSet(
 	ctx context.Context, executionResult string, opts ...options.Execute,
 ) (rs result.ClosableResultSet, finalErr error) {
-	onDone := trace.QueryOnSessionQueryResultSet(s.trace, &ctx,
-		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).QueryResultSet"), s, executionResult)
+	onDone := trace.QueryOnSessionQueryResultSet(
+		s.trace,
+		&ctx,
+		stack.FunctionID("github.com/ydb-platform/ydb-go-sdk/v3/internal/query.(*Session).QueryResultSet"),
+		s,
+		executionResult,
+	)
 	defer func() {
 		onDone(finalErr)
 	}()

@@ -7,33 +7,33 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func SessionOverGrpcMock(e fixenv.Env) *Session {
+func SessionOverGrpcMock(testEnv fixenv.Env) *Session {
 	fn := func() (*fixenv.GenericResult[*Session], error) {
-		s := newTestSession(fmt.Sprintf("test-session-id-%v", e.T().Name()))
-		s.client = QueryGrpcMock(e)
+		s := newTestSession(fmt.Sprintf("test-session-id-%v", testEnv.T().Name()))
+		s.client = QueryGrpcMock(testEnv)
 
 		return fixenv.NewGenericResult(s), nil
 	}
 
-	return fixenv.CacheResult(e, fn)
+	return fixenv.CacheResult(testEnv, fn)
 }
 
-func QueryGrpcMock(e fixenv.Env) *MockQueryServiceClient {
+func QueryGrpcMock(testEnv fixenv.Env) *MockQueryServiceClient {
 	fn := func() (*fixenv.GenericResult[*MockQueryServiceClient], error) {
-		m := NewMockQueryServiceClient(MockController(e))
+		m := NewMockQueryServiceClient(MockController(testEnv))
 
 		return fixenv.NewGenericResult(m), nil
 	}
 
-	return fixenv.CacheResult(e, fn)
+	return fixenv.CacheResult(testEnv, fn)
 }
 
-func MockController(e fixenv.Env) *gomock.Controller {
+func MockController(testEnv fixenv.Env) *gomock.Controller {
 	fn := func() (*fixenv.GenericResult[*gomock.Controller], error) {
-		mc := gomock.NewController(e.T().(gomock.TestReporter))
+		mc := gomock.NewController(testEnv.T().(gomock.TestReporter))
 
 		return fixenv.NewGenericResult(mc), nil
 	}
 
-	return fixenv.CacheResult(e, fn)
+	return fixenv.CacheResult(testEnv, fn)
 }

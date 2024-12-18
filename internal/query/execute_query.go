@@ -41,7 +41,7 @@ type executeScriptConfig interface {
 	OperationParams() *Ydb_Operations.OperationParams
 }
 
-func executeQueryScriptRequest(alloc *allocator.Allocator, q string, cfg executeScriptConfig) (
+func executeQueryScriptRequest(alloc *allocator.Allocator, queryString string, cfg executeScriptConfig) (
 	*Ydb_Query.ExecuteScriptRequest,
 	[]grpc.CallOption,
 	error,
@@ -60,7 +60,7 @@ func executeQueryScriptRequest(alloc *allocator.Allocator, q string, cfg execute
 			ReportCostInfo:   0,
 		},
 		ExecMode:      Ydb_Query.ExecMode(cfg.ExecMode()),
-		ScriptContent: queryQueryContent(alloc, Ydb_Query.Syntax(cfg.Syntax()), q),
+		ScriptContent: queryQueryContent(alloc, Ydb_Query.Syntax(cfg.Syntax()), queryString),
 		Parameters:    params,
 		StatsMode:     Ydb_Query.StatsMode(cfg.StatsMode()),
 		ResultsTtl:    durationpb.New(cfg.ResultsTTL()),
@@ -119,14 +119,14 @@ func queryFromText(
 
 func execute(
 	ctx context.Context, sessionID string, protoClient Ydb_Query_V1.QueryServiceClient,
-	q string, settings executeSettings, opts ...resultOption,
+	queryString string, settings executeSettings, opts ...resultOption,
 ) (
 	_ *streamResult, finalErr error,
 ) {
 	a := allocator.New()
 	defer a.Free()
 
-	request, callOptions, err := executeQueryRequest(a, sessionID, q, settings)
+	request, callOptions, err := executeQueryRequest(a, sessionID, queryString, settings)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -179,12 +179,15 @@ func readResultSet(
 	}, nil
 }
 
-func readMaterializedResultSet(ctx context.Context, r *streamResult) (_ *materializedResultSet, finalErr error) {
+func readMaterializedResultSet(
+	ctx context.Context,
+	currentStreamResult *streamResult,
+) (_ *materializedResultSet, finalErr error) {
 	defer func() {
-		_ = r.Close(ctx)
+		_ = currentStreamResult.Close(ctx)
 	}()
 
-	rs, err := r.nextResultSet(ctx)
+	rs, err := currentStreamResult.nextResultSet(ctx)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -203,7 +206,7 @@ func readMaterializedResultSet(ctx context.Context, r *streamResult) (_ *materia
 		rows = append(rows, row)
 	}
 
-	_, err = r.nextResultSet(ctx)
+	_, err = currentStreamResult.nextResultSet(ctx)
 	if err == nil {
 		return nil, xerrors.WithStackTrace(errMoreThanOneResultSet)
 	}
@@ -214,12 +217,12 @@ func readMaterializedResultSet(ctx context.Context, r *streamResult) (_ *materia
 	return MaterializedResultSet(rs.Index(), rs.Columns(), rs.ColumnTypes(), rows), nil
 }
 
-func readRow(ctx context.Context, r *streamResult) (_ *Row, finalErr error) {
+func readRow(ctx context.Context, currentStreamResult *streamResult) (_ *Row, finalErr error) {
 	defer func() {
-		_ = r.Close(ctx)
+		_ = currentStreamResult.Close(ctx)
 	}()
 
-	rs, err := r.nextResultSet(ctx)
+	rs, err := currentStreamResult.nextResultSet(ctx)
 	if err != nil {
 		return nil, xerrors.WithStackTrace(err)
 	}
@@ -237,7 +240,7 @@ func readRow(ctx context.Context, r *streamResult) (_ *Row, finalErr error) {
 		return nil, xerrors.WithStackTrace(err)
 	}
 
-	_, err = r.NextResultSet(ctx)
+	_, err = currentStreamResult.NextResultSet(ctx)
 	if err == nil {
 		return nil, xerrors.WithStackTrace(errMoreThanOneResultSet)
 	}
